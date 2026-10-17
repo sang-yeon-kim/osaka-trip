@@ -352,7 +352,7 @@
     </div>
 
     <!-- Hotel PIN gate -->
-    <div id="hotelPinModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4" onclick="closeHotelPinModal()">
+    <div id="hotelPinModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4" onclick="closeHotelPinFromBackdrop(event)">
         <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl border border-slate-100 animate-pop" onclick="event.stopPropagation()">
             <div class="w-12 h-12 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-2xl mb-4 mx-auto">
                 <i class="ph-fill ph-lock-key"></i>
@@ -620,6 +620,7 @@
         const HOTEL_MAP_URL = mapsSearchUrl('오사카 히노데 호텔');
         const HOTEL_PIN_HASH = '16d6eb9c4bf648aeb7e584e7b93b11e02da84596fe25bd0fdc438bd5f2e554e7';
         let pinModalPurpose = 'hotel';
+        let pinModalOpenedAt = 0;
 
         async function sha256Hex(text) {
             const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
@@ -648,15 +649,31 @@
             if (submitEl) submitEl.textContent = pinModalPurpose === 'title' ? '수정하기' : '위치 열기';
             if (err) err.classList.add('hidden');
             if (input) input.value = '';
-            if (modal) modal.classList.remove('hidden');
-            setTimeout(() => { if (input) input.focus(); }, 20);
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.style.pointerEvents = 'none';
+                pinModalOpenedAt = Date.now();
+                setTimeout(() => {
+                    modal.style.pointerEvents = '';
+                    if (input) input.focus();
+                }, 400);
+            }
+        }
+
+        function closeHotelPinFromBackdrop(event) {
+            if (event && event.target !== event.currentTarget) return;
+            if (Date.now() - pinModalOpenedAt < 450) return;
+            closeHotelPinModal();
         }
 
         function closeHotelPinModal() {
             const modal = document.getElementById('hotelPinModal');
             const input = document.getElementById('hotelPinInput');
             const err = document.getElementById('hotelPinError');
-            if (modal) modal.classList.add('hidden');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.style.pointerEvents = '';
+            }
             if (input) input.value = '';
             if (err) err.classList.add('hidden');
             pinModalPurpose = 'hotel';
@@ -1003,7 +1020,7 @@
         function setupTitleEditor() {
             const titleEl = document.getElementById('listTitle');
             if (!titleEl) return;
-            titleEl.addEventListener('pointerdown', (e) => {
+            titleEl.addEventListener('click', (e) => {
                 if (titleEl.getAttribute('contenteditable') === 'true') return;
                 e.preventDefault();
                 openPinModal('title', e);
