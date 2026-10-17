@@ -89,8 +89,8 @@
                         <span class="text-[10px] font-bold tracking-wider uppercase bg-white/20 px-2 py-0.5 rounded-full">OSAKA SHOPPING</span>
                         <button type="button" id="autoSaveHeaderBtn" onclick="openSyncSettings()" title="Supabase 실시간 동기화 설정"
                             class="text-[10px] font-bold bg-black/25 hover:bg-black/40 text-white px-2 py-0.5 rounded-full flex items-center gap-1 transition-all cursor-pointer border border-white/20">
-                            <span id="autoSaveDot" class="w-1.5 h-1.5 rounded-full bg-amber-300"></span>
-                            <span id="autoSaveStatusText">☁️ Supabase 연결</span>
+                            <span id="autoSaveDot" class="w-1.5 h-1.5 rounded-full bg-amber-300 animate-ping"></span>
+                            <span id="autoSaveStatusText">☁️ 동기화 중...</span>
                         </button>
                     </div>
                     <h1 id="listTitle" contenteditable="true" spellcheck="false" lang="ko"
@@ -728,7 +728,7 @@
             }
         }
 
-        function fillCredentialInputs(connected = false) {
+        function fillCredentialInputs() {
             const { url, key } = getStoredCredentials();
             const bannerUrl = document.getElementById('supabaseUrlInput');
             const bannerKey = document.getElementById('supabaseKeyInput');
@@ -738,7 +738,12 @@
             if (bannerKey) bannerKey.value = key;
             if (modalUrl) modalUrl.value = url;
             if (modalKey) modalKey.value = key;
-            document.getElementById('supabaseSetupBanner').classList.toggle('hidden', connected);
+        }
+
+        function setSupabaseSetupBannerVisible(visible) {
+            const banner = document.getElementById('supabaseSetupBanner');
+            if (!banner) return;
+            banner.classList.toggle('hidden', !visible);
         }
 
         function openSyncSettings() {
@@ -758,12 +763,14 @@
             if (!url || !key) {
                 setConnectError('Project URL과 publishable key를 모두 입력해주세요.');
                 showToast('Project URL과 publishable key를 모두 입력해주세요.', 'trash');
-                fillCredentialInputs(false);
+                fillCredentialInputs();
+                setSupabaseSetupBannerVisible(true);
                 return;
             }
             localStorage.setItem(SUPABASE_URL_KEY, url);
             localStorage.setItem(SUPABASE_ANON_KEY, key);
-            fillCredentialInputs(false);
+            fillCredentialInputs();
+            setSupabaseSetupBannerVisible(false);
             closeSyncSettings();
             setConnectError('');
             await initializeData();
@@ -944,7 +951,8 @@
                 items = loadLocalFallbackItems();
                 syncBackupStorage();
                 updateAutoSaveHeaderUI('setup');
-                fillCredentialInputs(false);
+                fillCredentialInputs();
+                setSupabaseSetupBannerVisible(true);
                 setConnectError('Supabase 클라이언트를 만들지 못했습니다. URL/키를 확인하세요.');
                 return;
             }
@@ -960,7 +968,8 @@
                 items = loadLocalFallbackItems();
                 syncBackupStorage();
                 updateAutoSaveHeaderUI('error');
-                fillCredentialInputs(false);
+                fillCredentialInputs();
+                setSupabaseSetupBannerVisible(true);
                 setConnectError('불러오기 실패: ' + (error.message || 'schema.sql 실행과 키를 확인하세요.'));
                 showToast('Supabase 불러오기에 실패했습니다. URL/키와 schema.sql 실행을 확인하세요.', 'trash');
                 return;
@@ -991,7 +1000,8 @@
             syncBackupStorage();
             subscribeRealtime();
             updateAutoSaveHeaderUI('connected');
-            fillCredentialInputs(true);
+            fillCredentialInputs();
+            setSupabaseSetupBannerVisible(false);
             setConnectError('');
         }
 
