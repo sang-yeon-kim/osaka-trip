@@ -109,11 +109,11 @@
                             <i class="ph-fill ph-map-pin text-[11px]"></i>
                             <span>우리 숙소</span>
                         </button>
-                        <button type="button" id="autoSaveHeaderBtn" onclick="openSyncSettings()" title="Supabase 실시간 동기화 설정"
-                            class="text-[10px] font-bold bg-white/45 hover:bg-white/70 text-osaka-dark px-2 py-0.5 rounded-full flex items-center gap-1 transition-all cursor-pointer border border-osaka-dark/10">
+                        <span id="autoSaveHeaderBtn" title="실시간 동기화 상태"
+                            class="text-[10px] font-bold bg-white/45 text-osaka-dark px-2 py-0.5 rounded-full flex items-center gap-1 border border-osaka-dark/10">
                             <span id="autoSaveDot" class="w-1.5 h-1.5 rounded-full bg-amber-600 animate-ping"></span>
                             <span id="autoSaveStatusText">☁️ 동기화 중...</span>
-                        </button>
+                        </span>
                     </div>
                     <h1 id="listTitle" contenteditable="false" spellcheck="false" lang="ko"
                         title="비밀번호 입력 후 제목을 바꿀 수 있습니다"
@@ -884,8 +884,7 @@
         }
 
         function openSyncSettings() {
-            fillCredentialInputs();
-            document.getElementById('syncSettingsModal').classList.remove('hidden');
+            return;
         }
 
         function closeSyncSettings() {
