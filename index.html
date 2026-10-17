@@ -618,7 +618,12 @@
         }
 
         const HOTEL_MAP_URL = mapsSearchUrl('오사카 히노데 호텔');
-        const HOTEL_PIN = '0313';
+        const HOTEL_PIN_HASH = '16d6eb9c4bf648aeb7e584e7b93b11e02da84596fe25bd0fdc438bd5f2e554e7';
+
+        async function sha256Hex(text) {
+            const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+            return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join('');
+        }
 
         function openHotelPinModal(event) {
             if (event) event.preventDefault();
@@ -640,12 +645,18 @@
             if (err) err.classList.add('hidden');
         }
 
-        function submitHotelPin(event) {
+        async function submitHotelPin(event) {
             if (event) event.preventDefault();
             const input = document.getElementById('hotelPinInput');
             const err = document.getElementById('hotelPinError');
             const pin = input ? input.value.trim() : '';
-            if (pin === HOTEL_PIN) {
+            let ok = false;
+            try {
+                ok = pin.length > 0 && (await sha256Hex(pin)) === HOTEL_PIN_HASH;
+            } catch (e) {
+                ok = false;
+            }
+            if (ok) {
                 closeHotelPinModal();
                 window.open(HOTEL_MAP_URL, '_blank', 'noopener,noreferrer');
                 return;
