@@ -115,9 +115,9 @@
                             <span id="autoSaveStatusText">☁️ 동기화 중...</span>
                         </button>
                     </div>
-                    <h1 id="listTitle" contenteditable="true" spellcheck="false" lang="ko"
-                        title="클릭해서 제목을 바꿀 수 있습니다"
-                        class="text-base sm:text-2xl font-extrabold tracking-tight mt-0.5 truncate cursor-text outline-none rounded-md px-0.5 -mx-0.5 focus:bg-white/40 focus:ring-2 focus:ring-osaka-dark/30">
+                    <h1 id="listTitle" contenteditable="false" spellcheck="false" lang="ko"
+                        title="비밀번호 입력 후 제목을 바꿀 수 있습니다"
+                        class="text-base sm:text-2xl font-extrabold tracking-tight mt-0.5 truncate cursor-pointer outline-none rounded-md px-0.5 -mx-0.5 focus:bg-white/40 focus:ring-2 focus:ring-osaka-dark/30">
                         오사카 쇼핑 리스트
                     </h1>
                 </div>
@@ -357,8 +357,8 @@
             <div class="w-12 h-12 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-2xl mb-4 mx-auto">
                 <i class="ph-fill ph-lock-key"></i>
             </div>
-            <h3 class="text-lg font-bold text-center text-slate-800">우리 숙소</h3>
-            <p class="text-sm text-center text-slate-500 mt-2">비밀번호를 입력하면 구글맵에서 위치를 엽니다.</p>
+            <h3 id="pinModalTitle" class="text-lg font-bold text-center text-slate-800">우리 숙소</h3>
+            <p id="pinModalMessage" class="text-sm text-center text-slate-500 mt-2">비밀번호를 입력하면 구글맵에서 위치를 엽니다.</p>
             <form onsubmit="submitHotelPin(event)" class="mt-4 space-y-3">
                 <input type="password" id="hotelPinInput" inputmode="numeric" autocomplete="off" maxlength="8"
                     placeholder="비밀번호" required
@@ -368,7 +368,7 @@
                     <button type="button" onclick="closeHotelPinModal()" class="flex-1 py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm transition-colors">
                         취소
                     </button>
-                    <button type="submit" class="flex-1 py-2.5 px-4 rounded-xl bg-osaka-dark hover:bg-slate-800 text-white font-semibold text-sm shadow-sm transition-colors">
+                    <button type="submit" id="pinModalSubmitBtn" class="flex-1 py-2.5 px-4 rounded-xl bg-osaka-dark hover:bg-slate-800 text-white font-semibold text-sm shadow-sm transition-colors">
                         위치 열기
                     </button>
                 </div>
@@ -619,6 +619,7 @@
 
         const HOTEL_MAP_URL = mapsSearchUrl('오사카 히노데 호텔');
         const HOTEL_PIN_HASH = '16d6eb9c4bf648aeb7e584e7b93b11e02da84596fe25bd0fdc438bd5f2e554e7';
+        let pinModalPurpose = 'hotel';
 
         async function sha256Hex(text) {
             const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
@@ -626,10 +627,25 @@
         }
 
         function openHotelPinModal(event) {
+            openPinModal('hotel', event);
+        }
+
+        function openPinModal(purpose, event) {
             if (event) event.preventDefault();
+            pinModalPurpose = purpose === 'title' ? 'title' : 'hotel';
             const modal = document.getElementById('hotelPinModal');
             const input = document.getElementById('hotelPinInput');
             const err = document.getElementById('hotelPinError');
+            const titleEl = document.getElementById('pinModalTitle');
+            const messageEl = document.getElementById('pinModalMessage');
+            const submitEl = document.getElementById('pinModalSubmitBtn');
+            if (titleEl) titleEl.textContent = pinModalPurpose === 'title' ? '제목 수정' : '우리 숙소';
+            if (messageEl) {
+                messageEl.textContent = pinModalPurpose === 'title'
+                    ? '비밀번호를 입력하면 제목을 바꿀 수 있습니다.'
+                    : '비밀번호를 입력하면 구글맵에서 위치를 엽니다.';
+            }
+            if (submitEl) submitEl.textContent = pinModalPurpose === 'title' ? '수정하기' : '위치 열기';
             if (err) err.classList.add('hidden');
             if (input) input.value = '';
             if (modal) modal.classList.remove('hidden');
@@ -643,6 +659,7 @@
             if (modal) modal.classList.add('hidden');
             if (input) input.value = '';
             if (err) err.classList.add('hidden');
+            pinModalPurpose = 'hotel';
         }
 
         async function submitHotelPin(event) {
@@ -650,6 +667,7 @@
             const input = document.getElementById('hotelPinInput');
             const err = document.getElementById('hotelPinError');
             const pin = input ? input.value.trim() : '';
+            const purpose = pinModalPurpose;
             let ok = false;
             try {
                 ok = pin.length > 0 && (await sha256Hex(pin)) === HOTEL_PIN_HASH;
@@ -658,7 +676,11 @@
             }
             if (ok) {
                 closeHotelPinModal();
-                window.open(HOTEL_MAP_URL, '_blank', 'noopener,noreferrer');
+                if (purpose === 'title') {
+                    beginTitleEdit();
+                } else {
+                    window.open(HOTEL_MAP_URL, '_blank', 'noopener,noreferrer');
+                }
                 return;
             }
             if (err) err.classList.remove('hidden');
@@ -981,7 +1003,13 @@
         function setupTitleEditor() {
             const titleEl = document.getElementById('listTitle');
             if (!titleEl) return;
+            titleEl.addEventListener('pointerdown', (e) => {
+                if (titleEl.getAttribute('contenteditable') === 'true') return;
+                e.preventDefault();
+                openPinModal('title', e);
+            });
             titleEl.addEventListener('keydown', (e) => {
+                if (titleEl.getAttribute('contenteditable') !== 'true') return;
                 if (e.key === 'Enter') {
                     e.preventDefault();
                     titleEl.blur();
@@ -992,6 +1020,9 @@
                 }
             });
             titleEl.addEventListener('blur', () => {
+                const wasEditing = titleEl.getAttribute('contenteditable') === 'true';
+                lockTitleEdit();
+                if (!wasEditing) return;
                 const next = titleEl.textContent.replace(/\s+/g, ' ').trim();
                 if (!next) {
                     titleEl.textContent = listTitle;
@@ -1004,6 +1035,28 @@
                 listTitle = next;
                 persistListAppearance();
             });
+        }
+
+        function beginTitleEdit() {
+            const titleEl = document.getElementById('listTitle');
+            if (!titleEl) return;
+            titleEl.setAttribute('contenteditable', 'true');
+            titleEl.classList.remove('cursor-pointer');
+            titleEl.classList.add('cursor-text');
+            titleEl.focus();
+            const range = document.createRange();
+            range.selectNodeContents(titleEl);
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+        }
+
+        function lockTitleEdit() {
+            const titleEl = document.getElementById('listTitle');
+            if (!titleEl) return;
+            titleEl.setAttribute('contenteditable', 'false');
+            titleEl.classList.remove('cursor-text');
+            titleEl.classList.add('cursor-pointer');
         }
 
         function cycleHeaderIcon() {
