@@ -2188,19 +2188,31 @@
         async function updateYenRate() {
             const el = document.getElementById('headerFxRate');
             if (!el) return;
-            try {
-                const res = await fetch('https://api.frankfurter.app/latest?from=JPY&to=KRW');
-                if (!res.ok) throw new Error('fx http');
-                const data = await res.json();
-                const krw = Number(data && data.rates && data.rates.KRW);
-                if (!krw) throw new Error('fx empty');
-                const per100 = Math.round(krw * 100);
-                el.textContent = `100엔 ≈ ${per100.toLocaleString()}원`;
-                if (data.date) el.title = `${data.date} 기준`;
-            } catch (e) {
-                el.textContent = '100엔';
-                el.title = '환율을 불러오지 못했습니다';
+            const loaders = [
+                async () => {
+                    const res = await fetch('https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/jpy.min.json');
+                    if (!res.ok) throw new Error('fx http');
+                    const data = await res.json();
+                    return { krw: Number(data && data.jpy && data.jpy.krw), date: data && data.date };
+                },
+                async () => {
+                    const res = await fetch('https://api.frankfurter.app/latest?from=JPY&to=KRW');
+                    if (!res.ok) throw new Error('fx http');
+                    const data = await res.json();
+                    return { krw: Number(data && data.rates && data.rates.KRW), date: data && data.date };
+                }
+            ];
+            for (const load of loaders) {
+                try {
+                    const { krw, date } = await load();
+                    if (!krw) continue;
+                    el.textContent = `100엔 ≈ ${Math.round(krw * 100).toLocaleString()}원`;
+                    if (date) el.title = `${date} 기준`;
+                    return;
+                } catch (e) {}
             }
+            el.textContent = '100엔';
+            el.title = '환율을 불러오지 못했습니다';
         }
 
         // --- Update Header Simple Progress ---
