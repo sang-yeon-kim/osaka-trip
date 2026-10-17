@@ -10,6 +10,8 @@
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
     <!-- Phosphor Icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Supabase JS (realtime + Postgres API) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -84,10 +86,10 @@
                 <div class="min-w-0">
                     <div class="flex items-center gap-1.5 flex-wrap">
                         <span class="text-[10px] font-bold tracking-wider uppercase bg-white/20 px-2 py-0.5 rounded-full">OSAKA SHOPPING</span>
-                        <button type="button" id="autoSaveHeaderBtn" onclick="connectOrSaveFileManual()" title="클릭하여 자동 저장 파일(osaka-data.json 또는 index.html) 연결/저장"
+                        <button type="button" id="autoSaveHeaderBtn" onclick="openSyncSettings()" title="Supabase 실시간 동기화 설정"
                             class="text-[10px] font-bold bg-black/25 hover:bg-black/40 text-white px-2 py-0.5 rounded-full flex items-center gap-1 transition-all cursor-pointer border border-white/20">
                             <span id="autoSaveDot" class="w-1.5 h-1.5 rounded-full bg-amber-300"></span>
-                            <span id="autoSaveStatusText">📂 자동저장 파일 연결</span>
+                            <span id="autoSaveStatusText">☁️ Supabase 연결</span>
                         </button>
                     </div>
                     <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight mt-0.5 flex items-center gap-1 truncate">
@@ -109,8 +111,31 @@
     <!-- Main Container -->
     <main class="max-w-2xl mx-auto px-4 mt-5 space-y-5">
 
-        <!-- Hidden File Input Fallback -->
+        <!-- Hidden File Input Fallback (JSON import → Supabase upsert) -->
         <input type="file" id="hiddenJsonFileInput" accept=".json,application/json" class="hidden" onchange="handleFallbackFileSelect(event)">
+
+        <!-- Supabase connection banner (shown until credentials work) -->
+        <section id="supabaseSetupBanner" class="hidden bg-white rounded-2xl p-5 shadow-md border border-amber-200">
+            <h2 class="text-base font-bold text-slate-800 mb-1.5 flex items-center gap-1.5">
+                <i class="ph-bold ph-cloud-arrow-up text-osaka-red text-lg"></i>
+                <span>Supabase 실시간 동기화 연결</span>
+            </h2>
+            <p class="text-xs text-slate-500 mb-3 leading-relaxed">
+                대시보드에서 <code class="bg-slate-100 px-1 rounded">supabase/schema.sql</code>을 실행한 뒤,
+                Project URL과 anon(publishable) key를 입력하세요. 휴대폰·PC에서 같은 목록이 실시간으로 맞춰집니다.
+            </p>
+            <div class="grid grid-cols-1 gap-2">
+                <input type="url" id="supabaseUrlInput" placeholder="https://xxxx.supabase.co" autocomplete="off"
+                    class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm focus:bg-white focus:border-osaka-red focus:outline-none focus:ring-2 focus:ring-osaka-red/20">
+                <input type="password" id="supabaseKeyInput" placeholder="anon / publishable key" autocomplete="off"
+                    class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm focus:bg-white focus:border-osaka-red focus:outline-none focus:ring-2 focus:ring-osaka-red/20">
+                <p id="supabaseConnectError" class="hidden text-xs font-semibold text-osaka-red"></p>
+                <button type="button" id="supabaseConnectBtn" onclick="saveSupabaseCredentials()"
+                    class="bg-osaka-teal hover:bg-teal-700 text-white font-bold text-sm px-6 py-2.5 rounded-xl">
+                    연결하고 실시간 동기화 시작
+                </button>
+            </div>
+        </section>
 
         <!-- Add Item Form -->
         <section class="bg-white rounded-2xl p-5 shadow-md border border-slate-100">
@@ -255,6 +280,29 @@
                 <button type="button" onclick="closeJpZoomModal()" class="flex-1 py-2.5 px-4 rounded-xl bg-osaka-red hover:bg-red-600 text-white font-bold text-xs shadow-sm transition-colors">
                     닫기
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Supabase Settings Modal -->
+    <div id="syncSettingsModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4" onclick="closeSyncSettings()">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-100 animate-pop space-y-3" onclick="event.stopPropagation()">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-bold text-slate-800">Supabase 동기화</h3>
+                <button type="button" onclick="closeSyncSettings()" class="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 flex items-center justify-center">
+                    <i class="ph-bold ph-x"></i>
+                </button>
+            </div>
+            <p class="text-xs text-slate-500 leading-relaxed">Project URL과 anon key는 이 브라우저에만 저장됩니다. SQL 스키마는 프로젝트의 <code class="bg-slate-100 px-1 rounded">supabase/schema.sql</code>입니다.</p>
+            <input type="url" id="supabaseUrlInputModal" placeholder="https://xxxx.supabase.co" autocomplete="off"
+                class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm focus:bg-white focus:border-osaka-red focus:outline-none">
+            <input type="password" id="supabaseKeyInputModal" placeholder="anon / publishable key" autocomplete="off"
+                class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm focus:bg-white focus:border-osaka-red focus:outline-none">
+            <div class="flex gap-2">
+                <button type="button" onclick="document.getElementById('hiddenJsonFileInput').click()"
+                    class="flex-1 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm">JSON 가져오기</button>
+                <button type="button" onclick="saveSupabaseCredentials(true)"
+                    class="flex-1 py-2.5 rounded-xl bg-osaka-red hover:bg-red-600 text-white font-semibold text-sm">저장 후 연결</button>
             </div>
         </div>
     </div>
@@ -453,19 +501,26 @@
             '패밀리마트': 'bg-green-50 text-green-700 border-green-200'
         };
 
-        constBACKUP_STORAGE_KEY = 'osaka_shopping_auto_backup_v4';
+        const BACKUP_STORAGE_KEY = 'osaka_shopping_auto_backup_v4';
+        const SUPABASE_URL_KEY = 'osaka_supabase_url';
+        const SUPABASE_ANON_KEY = 'osaka_supabase_anon_key';
+        const DEFAULT_SUPABASE_URL = 'https://lyuybstutyivxagqxoxe.supabase.co';
+        const DEFAULT_SUPABASE_KEY = 'sb_publishable_g2jH40oLkuTVAYvlzgn3zg_ad_HNvQN';
 
         let items = [];
         let currentCategory = '전체';
         let currentBranchFilter = '전체';
         let editingItemId = null; // ID of item currently being edited
         let translatingItemId = null; // ID of item currently being translated
-        let fileHandle = null;    // File System Access API handle for instant silent auto-save
+        let supabaseClient = null;
+        let realtimeChannel = null;
+        let applyingRemoteChange = false;
 
         // --- Initialization ---
         window.addEventListener('DOMContentLoaded', async () => {
             handleCategoryChange();
             setupDragAndDrop();
+            fillCredentialInputs();
             await initializeData();
             renderCategoryTabs();
             renderSubFilterPills();
@@ -474,49 +529,329 @@
         });
 
         // =========================================================================
-        // 2. AUTOMATIC FILE STORAGE SYSTEM (Instant Auto-Save on Every Action)
+        // 2. SUPABASE REALTIME STORAGE
         // =========================================================================
-        async function initializeData() {
-            // 1) Try loading './osaka-data.json' if hosted with a companion JSON file
-            try {
-                const response = await fetch('./osaka-data.json', { cache: 'no-store' });
-                if (response.ok) {
-                    const data = await response.json();
-                    const arr = Array.isArray(data) ? data : (data && Array.isArray(data.items) ? data.items : null);
-                    if (arr && arr.length > 0) {
-                        items = normalizeItems(arr);
-                        syncBackupStorage();
-                        updateAutoSaveHeaderUI('json-loaded');
-                        return;
-                    }
-                }
-            } catch (err) {
-                // Local file:// protocol or no external osaka-data.json present
-            }
+        function getStoredCredentials() {
+            return {
+                url: (localStorage.getItem(SUPABASE_URL_KEY) || DEFAULT_SUPABASE_URL || '').trim(),
+                key: (localStorage.getItem(SUPABASE_ANON_KEY) || DEFAULT_SUPABASE_KEY || '').trim()
+            };
+        }
 
-            // 2) Check local backup or legacy storage so edits are never lost on refresh
+        function setConnectError(message) {
+            const el = document.getElementById('supabaseConnectError');
+            if (!el) return;
+            if (message) {
+                el.textContent = message;
+                el.classList.remove('hidden');
+            } else {
+                el.textContent = '';
+                el.classList.add('hidden');
+            }
+        }
+
+        function fillCredentialInputs(connected = false) {
+            const { url, key } = getStoredCredentials();
+            const bannerUrl = document.getElementById('supabaseUrlInput');
+            const bannerKey = document.getElementById('supabaseKeyInput');
+            const modalUrl = document.getElementById('supabaseUrlInputModal');
+            const modalKey = document.getElementById('supabaseKeyInputModal');
+            if (bannerUrl) bannerUrl.value = url;
+            if (bannerKey) bannerKey.value = key;
+            if (modalUrl) modalUrl.value = url;
+            if (modalKey) modalKey.value = key;
+            document.getElementById('supabaseSetupBanner').classList.toggle('hidden', connected);
+        }
+
+        function openSyncSettings() {
+            fillCredentialInputs();
+            document.getElementById('syncSettingsModal').classList.remove('hidden');
+        }
+
+        function closeSyncSettings() {
+            document.getElementById('syncSettingsModal').classList.add('hidden');
+        }
+
+        async function saveSupabaseCredentials(fromModal = false) {
+            const urlEl = fromModal ? document.getElementById('supabaseUrlInputModal') : document.getElementById('supabaseUrlInput');
+            const keyEl = fromModal ? document.getElementById('supabaseKeyInputModal') : document.getElementById('supabaseKeyInput');
+            const url = (urlEl && urlEl.value.trim()) || '';
+            const key = (keyEl && keyEl.value.trim()) || '';
+            if (!url || !key) {
+                setConnectError('Project URL과 publishable key를 모두 입력해주세요.');
+                showToast('Project URL과 publishable key를 모두 입력해주세요.', 'trash');
+                fillCredentialInputs(false);
+                return;
+            }
+            localStorage.setItem(SUPABASE_URL_KEY, url);
+            localStorage.setItem(SUPABASE_ANON_KEY, key);
+            fillCredentialInputs(false);
+            closeSyncSettings();
+            setConnectError('');
+            showToast('Supabase에 연결 중...');
+            await initializeData();
+            renderCategoryTabs();
+            renderSubFilterPills();
+            renderShoppingList();
+            updateHeaderProgress();
+        }
+
+        function createSupabaseClient() {
+            const { url, key } = getStoredCredentials();
+            if (!url || !key || !window.supabase || typeof window.supabase.createClient !== 'function') {
+                return null;
+            }
             try {
-                const candidateKeys = [constBACKUP_STORAGE_KEY, 'osaka_shopping_list_v2', 'osaka_shopping_v3_items', 'osaka_shopping_list_v1', 'osakaShoppingList'];
+                return window.supabase.createClient(url, key, {
+                    realtime: { params: { eventsPerSecond: 10 } }
+                });
+            } catch (err) {
+                console.warn('createClient failed:', err);
+                return null;
+            }
+        }
+
+        function itemToRow(item) {
+            return {
+                id: item.id,
+                name: item.name,
+                jp_name: item.jpName || '',
+                category: item.category,
+                branch: item.branch || '',
+                price: item.price,
+                memo: item.memo || '',
+                completed: Boolean(item.completed),
+                created_at: item.createdAt,
+                updated_at: new Date().toISOString()
+            };
+        }
+
+        function rowToItem(row) {
+            return normalizeItems([{
+                id: row.id,
+                name: row.name,
+                jpName: row.jp_name,
+                category: row.category,
+                branch: row.branch,
+                price: row.price,
+                memo: row.memo,
+                completed: row.completed,
+                createdAt: row.created_at
+            }])[0];
+        }
+
+        function loadLocalFallbackItems() {
+            try {
+                const primary = localStorage.getItem(BACKUP_STORAGE_KEY);
+                if (primary) {
+                    const parsed = JSON.parse(primary);
+                    if (Array.isArray(parsed)) return normalizeItems(parsed);
+                }
+                const candidateKeys = ['osaka_shopping_list_v2', 'osaka_shopping_v3_items', 'osaka_shopping_list_v1', 'osakaShoppingList'];
                 for (const key of candidateKeys) {
                     const raw = localStorage.getItem(key);
-                    if (raw) {
-                        const parsed = JSON.parse(raw);
-                        if (Array.isArray(parsed) && parsed.length > 0) {
-                            items = normalizeItems(parsed);
-                            syncBackupStorage();
-                            updateAutoSaveHeaderUI('ready');
-                            return;
-                        }
+                    if (!raw) continue;
+                    const parsed = JSON.parse(raw);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        return normalizeItems(parsed);
                     }
                 }
-            } catch (e) {
-                // Ignore storage restrictions
+            } catch (e) {}
+            return normalizeItems(EMBEDDED_ITEMS);
+        }
+
+        async function initializeData() {
+            if (realtimeChannel && supabaseClient) {
+                try { supabaseClient.removeChannel(realtimeChannel); } catch (e) {}
+                realtimeChannel = null;
+            }
+            supabaseClient = createSupabaseClient();
+
+            if (!supabaseClient) {
+                items = loadLocalFallbackItems();
+                syncBackupStorage();
+                updateAutoSaveHeaderUI('setup');
+                fillCredentialInputs(false);
+                setConnectError('Supabase 클라이언트를 만들지 못했습니다. URL/키를 확인하세요.');
+                return;
             }
 
-            // 3) Fallback to EMBEDDED_ITEMS inside HTML file
-            items = normalizeItems(EMBEDDED_ITEMS);
+            updateAutoSaveHeaderUI('saving');
+            const { data, error } = await supabaseClient
+                .from('shopping_items')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.warn('Supabase load failed:', error);
+                items = loadLocalFallbackItems();
+                syncBackupStorage();
+                updateAutoSaveHeaderUI('error');
+                fillCredentialInputs(false);
+                setConnectError('불러오기 실패: ' + (error.message || 'schema.sql 실행과 키를 확인하세요.'));
+                showToast('Supabase 불러오기에 실패했습니다. URL/키와 schema.sql 실행을 확인하세요.', 'trash');
+                return;
+            }
+
+            const remoteItems = normalizeItems((data || []).map(rowToItem));
+            if (remoteItems.length > 0) {
+                items = remoteItems;
+            } else {
+                const localItems = loadLocalFallbackItems();
+                items = localItems;
+                if (localItems.length > 0) {
+                    const { error: seedError } = await supabaseClient
+                        .from('shopping_items')
+                        .upsert(localItems.map(itemToRow), { onConflict: 'id' });
+                    if (seedError) {
+                        console.warn('Seed failed:', seedError);
+                        showToast('기존 로컬 목록을 클라우드에 올리지 못했습니다.', 'trash');
+                    } else {
+                        showToast(`로컬 ${localItems.length}개 항목을 Supabase에 올렸습니다.`);
+                    }
+                }
+            }
+
+            const creds = getStoredCredentials();
+            localStorage.setItem(SUPABASE_URL_KEY, creds.url);
+            localStorage.setItem(SUPABASE_ANON_KEY, creds.key);
             syncBackupStorage();
-            updateAutoSaveHeaderUI('ready');
+            subscribeRealtime();
+            updateAutoSaveHeaderUI('connected');
+            fillCredentialInputs(true);
+            setConnectError('');
+            showToast('Supabase 실시간 동기화가 연결되었습니다!');
+        }
+
+        function subscribeRealtime() {
+            if (!supabaseClient) return;
+            realtimeChannel = supabaseClient
+                .channel('shopping-items-live')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'shopping_items' }, (payload) => {
+                    applyRemoteChange(payload);
+                })
+                .subscribe((status) => {
+                    if (status === 'SUBSCRIBED') {
+                        updateAutoSaveHeaderUI('connected');
+                    } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+                        updateAutoSaveHeaderUI('error');
+                    }
+                });
+        }
+
+        function applyRemoteChange(payload) {
+            applyingRemoteChange = true;
+            const eventType = payload.eventType || payload.event;
+            try {
+                if (eventType === 'INSERT' && payload.new) {
+                    const incoming = rowToItem(payload.new);
+                    if (!items.some(i => i.id === incoming.id)) {
+                        items.unshift(incoming);
+                    } else {
+                        items = items.map(i => i.id === incoming.id ? incoming : i);
+                    }
+                } else if (eventType === 'UPDATE' && payload.new) {
+                    const incoming = rowToItem(payload.new);
+                    if (editingItemId === incoming.id) return;
+                    const idx = items.findIndex(i => i.id === incoming.id);
+                    if (idx > -1) items[idx] = incoming;
+                    else items.unshift(incoming);
+                } else if (eventType === 'DELETE') {
+                    const deletedId = (payload.old && payload.old.id) || null;
+                    if (!deletedId) return;
+                    if (editingItemId === deletedId) editingItemId = null;
+                    items = items.filter(i => i.id !== deletedId);
+                } else {
+                    return;
+                }
+                syncBackupStorage();
+                renderCategoryTabs();
+                renderSubFilterPills();
+                renderShoppingList();
+                updateHeaderProgress();
+            } finally {
+                applyingRemoteChange = false;
+            }
+        }
+
+        async function persistItemsToSupabase(actionLabel = '변경사항') {
+            syncBackupStorage();
+            if (!supabaseClient) {
+                updateAutoSaveHeaderUI('setup');
+                showToast(`${actionLabel} · 브라우저에만 저장됨. 상단에서 Supabase를 연결하세요.`);
+                return;
+            }
+            if (applyingRemoteChange) return;
+
+            updateAutoSaveHeaderUI('saving');
+            const { error } = await supabaseClient
+                .from('shopping_items')
+                .upsert(items.map(itemToRow), { onConflict: 'id' });
+            if (error) {
+                updateAutoSaveHeaderUI('error');
+                showToast(`${actionLabel} 클라우드 저장 실패: ${error.message}`, 'trash');
+                return;
+            }
+            updateAutoSaveHeaderUI('connected');
+            showToast(`${actionLabel} · Supabase에 실시간 저장되었습니다!`);
+        }
+
+        async function persistSingleItem(item, actionLabel) {
+            syncBackupStorage();
+            if (!supabaseClient) {
+                updateAutoSaveHeaderUI('setup');
+                showToast(`${actionLabel} · 브라우저에만 저장됨. 상단에서 Supabase를 연결하세요.`);
+                return;
+            }
+            if (applyingRemoteChange) return;
+            updateAutoSaveHeaderUI('saving');
+            const { error } = await supabaseClient
+                .from('shopping_items')
+                .upsert(itemToRow(item), { onConflict: 'id' });
+            if (error) {
+                updateAutoSaveHeaderUI('error');
+                showToast(`${actionLabel} 클라우드 저장 실패: ${error.message}`, 'trash');
+                return;
+            }
+            updateAutoSaveHeaderUI('connected');
+            showToast(`${actionLabel} · Supabase에 저장되었습니다!`);
+        }
+
+        async function persistDeleteByIds(ids, actionLabel) {
+            syncBackupStorage();
+            if (!supabaseClient) {
+                updateAutoSaveHeaderUI('setup');
+                showToast(`${actionLabel} · 브라우저에만 반영됨. Supabase를 연결하세요.`);
+                return;
+            }
+            if (!ids.length) return;
+            updateAutoSaveHeaderUI('saving');
+            const { error } = await supabaseClient.from('shopping_items').delete().in('id', ids);
+            if (error) {
+                updateAutoSaveHeaderUI('error');
+                showToast(`${actionLabel} 클라우드 삭제 실패: ${error.message}`, 'trash');
+                return;
+            }
+            updateAutoSaveHeaderUI('connected');
+            showToast(`${actionLabel} · Supabase에 반영되었습니다!`);
+        }
+
+        async function persistDeleteAll(actionLabel) {
+            syncBackupStorage();
+            if (!supabaseClient) {
+                updateAutoSaveHeaderUI('setup');
+                showToast(`${actionLabel} · 브라우저에만 반영됨. Supabase를 연결하세요.`);
+                return;
+            }
+            updateAutoSaveHeaderUI('saving');
+            const { error } = await supabaseClient.from('shopping_items').delete().neq('id', '');
+            if (error) {
+                updateAutoSaveHeaderUI('error');
+                showToast(`${actionLabel} 클라우드 초기화 실패: ${error.message}`, 'trash');
+                return;
+            }
+            updateAutoSaveHeaderUI('connected');
+            showToast(`${actionLabel} · Supabase에 반영되었습니다!`);
         }
 
         function normalizeItems(rawArray) {
@@ -535,118 +870,28 @@
 
         function syncBackupStorage() {
             try {
-                localStorage.setItem(constBACKUP_STORAGE_KEY, JSON.stringify(items));
+                localStorage.setItem(BACKUP_STORAGE_KEY, JSON.stringify(items));
             } catch (e) {}
         }
 
-        function updateAutoSaveHeaderUI(state, fileName = '') {
+        function updateAutoSaveHeaderUI(state) {
             const dot = document.getElementById('autoSaveDot');
             const text = document.getElementById('autoSaveStatusText');
             if (!dot || !text) return;
 
             if (state === 'connected') {
                 dot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse';
-                text.textContent = `💾 자동저장됨 (${fileName || '파일'})`;
+                text.textContent = '☁️ 실시간 동기화 중';
             } else if (state === 'saving') {
                 dot.className = 'w-1.5 h-1.5 rounded-full bg-amber-300 animate-ping';
-                text.textContent = '💾 파일 자동 저장 중...';
-            } else if (state === 'json-loaded') {
-                dot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-300';
-                text.textContent = '📂 자동저장 파일 연결';
+                text.textContent = '☁️ Supabase 저장 중...';
+            } else if (state === 'error') {
+                dot.className = 'w-1.5 h-1.5 rounded-full bg-rose-400';
+                text.textContent = '☁️ 동기화 오류';
             } else {
                 dot.className = 'w-1.5 h-1.5 rounded-full bg-amber-300';
-                text.textContent = '📂 자동저장 파일 연결';
+                text.textContent = '☁️ Supabase 연결';
             }
-        }
-
-        // Build self-contained HTML string with updated EMBEDDED_ITEMS
-        function buildUpdatedHtmlString() {
-            const currentDocHtml = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
-            const replacementBlock = `/*__OSAKA_EMBEDDED_DATA_START__*/\n        const EMBEDDED_ITEMS = ${JSON.stringify(items, null, 4)};\n        /*__OSAKA_EMBEDDED_DATA_END__*/`;
-            return currentDocHtml.replace(
-                /\/\*__OSAKA_EMBEDDED_DATA_START__\*\/[\s\S]*?\/\*__OSAKA_EMBEDDED_DATA_END__\*\//,
-                replacementBlock
-            );
-        }
-
-        // Triggered automatically whenever an item is added, edited, deleted, toggled, or translated
-        async function autoSaveToFile(actionLabel = '변경사항') {
-            // 1. Always sync local backup immediately
-            syncBackupStorage();
-
-            // 2. If a fileHandle is already linked, write directly to disk silently in background
-            if (fileHandle) {
-                try {
-                    updateAutoSaveHeaderUI('saving');
-                    const writable = await fileHandle.createWritable();
-                    const isHtmlFile = fileHandle.name.toLowerCase().endsWith('.html') || fileHandle.name.toLowerCase().endsWith('.htm');
-                    const contentToWrite = isHtmlFile ? buildUpdatedHtmlString() : JSON.stringify(items, null, 2);
-                    await writable.write(contentToWrite);
-                    await writable.close();
-                    updateAutoSaveHeaderUI('connected', fileHandle.name);
-                    showToast(`${actionLabel} · '${fileHandle.name}' 파일에 자동 저장되었습니다!`);
-                    return;
-                } catch (err) {
-                    console.warn('Silent auto-save failed, resetting handle:', err);
-                    fileHandle = null;
-                }
-            }
-
-            // 3. If File System Access API is supported and no file is linked yet, prompt once to link the file for continuous auto-save
-            if (window.showSaveFilePicker) {
-                try {
-                    fileHandle = await window.showSaveFilePicker({
-                        suggestedName: '오사카쇼핑리스트.html',
-                        types: [
-                            {
-                                description: '통합 HTML 파일 (호스팅/단독 실행용)',
-                                accept: { 'text/html': ['.html'] }
-                            },
-                            {
-                                description: 'JSON 데이터 파일 (osaka-data.json)',
-                                accept: { 'application/json': ['.json'] }
-                            }
-                        ]
-                    });
-                    const writable = await fileHandle.createWritable();
-                    const isHtmlFile = fileHandle.name.toLowerCase().endsWith('.html') || fileHandle.name.toLowerCase().endsWith('.htm');
-                    const contentToWrite = isHtmlFile ? buildUpdatedHtmlString() : JSON.stringify(items, null, 2);
-                    await writable.write(contentToWrite);
-                    await writable.close();
-                    updateAutoSaveHeaderUI('connected', fileHandle.name);
-                    showToast(`'${fileHandle.name}' 연결 완료! 이제부터 모든 변경 시 즉시 자동 저장됩니다.`);
-                    return;
-                } catch (err) {
-                    // User dismissed picker: still keep data safe in backup storage and notify
-                    updateAutoSaveHeaderUI('ready');
-                    showToast(`${actionLabel} 완료! (상단 '자동저장 파일 연결'을 누르면 파일에 바로 기록됩니다)`);
-                    return;
-                }
-            }
-
-            // 4. Fallback for browsers without showSaveFilePicker: auto-download updated HTML file
-            triggerBlobDownload(buildUpdatedHtmlString(), '오사카쇼핑리스트.html', 'text/html;charset=utf-8');
-            showToast(`${actionLabel} · 최신 파일이 자동 저장(다운로드)되었습니다!`);
-        }
-
-        // Manual click on header badge to connect or switch target auto-save file
-        async function connectOrSaveFileManual() {
-            fileHandle = null;
-            await autoSaveToFile('수동 파일 동기화');
-        }
-
-        function triggerBlobDownload(content, filename, mimeType) {
-            const blob = new Blob([content], { type: mimeType });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            setTimeout(() => {
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-            }, 100);
         }
 
         function handleFallbackFileSelect(event) {
@@ -672,12 +917,11 @@
                 editingItemId = null;
                 currentCategory = '전체';
                 currentBranchFilter = '전체';
-                syncBackupStorage();
                 renderCategoryTabs();
                 renderSubFilterPills();
                 renderShoppingList();
                 updateHeaderProgress();
-                showToast(`'${sourceName}'에서 ${items.length}개 항목을 불러왔습니다!`);
+                persistItemsToSupabase(`'${sourceName}'에서 ${items.length}개 항목 가져오기`);
             } catch (err) {
                 showToast('JSON 파일을 읽는 중 오류가 발생했습니다.', 'trash');
             }
@@ -726,20 +970,20 @@
             if (KO_JA_DICT[rawName]) {
                 item.jpName = KO_JA_DICT[rawName];
                 renderShoppingList();
-                await autoSaveToFile(`'${rawName}' → '${item.jpName}' 번역`);
+                await persistSingleItem(item, `'${rawName}' → '${item.jpName}' 번역`);
                 return;
             }
             if (KO_JA_DICT[cleanQuery]) {
                 item.jpName = KO_JA_DICT[cleanQuery];
                 renderShoppingList();
-                await autoSaveToFile(`'${rawName}' → '${item.jpName}' 번역`);
+                await persistSingleItem(item, `'${rawName}' → '${item.jpName}' 번역`);
                 return;
             }
             for (const [korKey, jpVal] of Object.entries(KO_JA_DICT)) {
                 if (korKey.replace(/\s+/g, '') === normalizedNoSpace) {
                     item.jpName = jpVal;
                     renderShoppingList();
-                    await autoSaveToFile(`'${rawName}' → '${item.jpName}' 번역`);
+                    await persistSingleItem(item, `'${rawName}' → '${item.jpName}' 번역`);
                     return;
                 }
             }
@@ -783,7 +1027,7 @@
             if (translatedText) {
                 item.jpName = translatedText;
                 renderShoppingList();
-                await autoSaveToFile(`'${rawName}' → '${translatedText}' 번역`);
+                await persistSingleItem(item, `'${rawName}' → '${translatedText}' 번역`);
             } else {
                 renderShoppingList();
                 showToast('번역 서버에 연결할 수 없습니다. 수정 창에서 직접 입력도 가능합니다.', 'trash');
@@ -1030,7 +1274,7 @@
             renderShoppingList();
             updateHeaderProgress();
 
-            await autoSaveToFile(`'${name}' 추가`);
+            await persistSingleItem(newItem, `'${name}' 추가`);
         }
 
         async function toggleItemComplete(id) {
@@ -1040,7 +1284,7 @@
                 item.completed = !item.completed;
                 renderShoppingList();
                 updateHeaderProgress();
-                await autoSaveToFile(`'${item.name}' ${item.completed ? '구매완료' : '미구매 변경'}`);
+                await persistSingleItem(item, `'${item.name}' ${item.completed ? '구매완료' : '미구매 변경'}`);
             }
         }
 
@@ -1134,7 +1378,7 @@
             renderCategoryTabs();
             renderSubFilterPills();
             renderShoppingList();
-            await autoSaveToFile(`'${newName}' 수정`);
+            await persistSingleItem(item, `'${newName}' 수정`);
         }
 
         function cancelEditItem(event) {
@@ -1154,7 +1398,7 @@
                 renderSubFilterPills();
                 renderShoppingList();
                 updateHeaderProgress();
-                await autoSaveToFile(`'${removedName}' 삭제`);
+                await persistDeleteByIds([id], `'${removedName}' 삭제`);
             }
         }
 
@@ -1440,12 +1684,13 @@
                 '완료 항목 삭제',
                 `구매 완료된 ${completedCount}개의 항목을 리스트에서 삭제하시겠습니까?`,
                 async () => {
+                    const removedIds = items.filter(i => i.completed).map(i => i.id);
                     items = items.filter(i => !i.completed);
                     renderCategoryTabs();
                     renderSubFilterPills();
                     renderShoppingList();
                     updateHeaderProgress();
-                    await autoSaveToFile('구매 완료 항목 정리');
+                    await persistDeleteByIds(removedIds, '구매 완료 항목 정리');
                 }
             );
         }
@@ -1465,7 +1710,7 @@
                     renderSubFilterPills();
                     renderShoppingList();
                     updateHeaderProgress();
-                    await autoSaveToFile('전체 리스트 초기화');
+                    await persistDeleteAll('전체 리스트 초기화');
                 }
             );
         }
@@ -1484,7 +1729,7 @@
                 toastIcon.className = 'ph-fill ph-check-circle text-emerald-400 text-base';
             }
 
-            toast.classList.remove('opacity-0', 'translate-x-[-50%]', 'translate-y-2');
+            toast.classList.remove('opacity-0', 'translate-y-2');
             toast.classList.add('opacity-100', 'translate-y-0');
 
             clearTimeout(toastTimeout);
