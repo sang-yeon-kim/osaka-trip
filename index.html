@@ -766,6 +766,8 @@
         const BACKUP_STORAGE_KEY = 'osaka_shopping_auto_backup_v4';
         const SUPABASE_URL_KEY = 'osaka_supabase_url';
         const SUPABASE_ANON_KEY = 'osaka_supabase_anon_key';
+        const DEFAULT_SUPABASE_URL = 'https://lyuybstutyivxagqxoxe.supabase.co';
+        const DEFAULT_SUPABASE_KEY = 'sb_publishable_g2jH40oLkuTVAYvlzgn3zg_ad_HNvQN';
         const LIST_META_ID = '__list_meta';
         const LIST_TITLE_KEY = 'osaka_list_title';
         const LIST_ICON_KEY = 'osaka_list_icon';
@@ -807,8 +809,8 @@
         // =========================================================================
         function getStoredCredentials() {
             return {
-                url: (localStorage.getItem(SUPABASE_URL_KEY) || '').trim(),
-                key: (localStorage.getItem(SUPABASE_ANON_KEY) || '').trim()
+                url: (localStorage.getItem(SUPABASE_URL_KEY) || DEFAULT_SUPABASE_URL || '').trim(),
+                key: (localStorage.getItem(SUPABASE_ANON_KEY) || DEFAULT_SUPABASE_KEY || '').trim()
             };
         }
 
