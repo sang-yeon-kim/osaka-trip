@@ -96,9 +96,6 @@
 
     <!-- Top Banner / Header -->
     <header class="bg-gradient-to-r from-[#F7D048] via-[#F5C518] to-osaka-orange text-osaka-dark shadow-lg sticky top-0 z-30">
-        <div class="text-center py-0.5 px-3 text-[10px] font-semibold tracking-wide text-osaka-dark/75 bg-black/5 border-b border-osaka-dark/10">
-            <span id="headerFxRate">100엔</span>
-        </div>
         <div class="max-w-2xl mx-auto px-4 py-3.5 flex items-center justify-between gap-2">
             <div class="flex items-center space-x-2.5 min-w-0">
                 <button type="button" id="headerIconBtn" onclick="cycleHeaderIcon()" title="클릭하면 오사카 대표 이미지로 바뀝니다"
@@ -835,7 +832,6 @@
             handleCategoryChange();
             setupDragAndDrop();
             fillCredentialInputs();
-            updateYenRate();
             await initializeData();
             renderCategoryTabs();
             renderSubFilterPills();
@@ -931,6 +927,24 @@
             }
         }
 
+        const KRW_MARK_RE = /(?:\n)?\[\[krw:(\d+)\]\]\s*$/;
+
+        function parseMemoKrw(raw) {
+            const text = String(raw || '');
+            const m = text.match(KRW_MARK_RE);
+            if (!m) return { memo: text, krwPrice: null };
+            return {
+                memo: text.replace(KRW_MARK_RE, '').replace(/\s+$/g, ''),
+                krwPrice: parseInt(m[1], 10)
+            };
+        }
+
+        function encodeMemoKrw(memo, krwPrice) {
+            const base = String(memo || '').replace(KRW_MARK_RE, '').replace(/\s+$/g, '');
+            if (krwPrice == null || !(Number(krwPrice) > 0)) return base;
+            return (base ? base + '\n' : '') + `[[krw:${Math.round(Number(krwPrice))}]]`;
+        }
+
         function itemToRow(item) {
             return {
                 id: item.id,
@@ -939,7 +953,7 @@
                 category: item.category,
                 branch: item.branch || '',
                 price: item.price,
-                memo: item.memo || '',
+                memo: encodeMemoKrw(item.memo, item.krwPrice),
                 completed: Boolean(item.completed),
                 created_at: item.createdAt,
                 updated_at: new Date().toISOString()
@@ -1308,17 +1322,24 @@
         }
 
         function normalizeItems(rawArray) {
-            return rawArray.map((item, idx) => ({
-                id: item.id || ('item-' + Date.now() + '-' + idx),
-                name: String(item.name || '이름 없음'),
-                jpName: item.jpName ? String(item.jpName) : '',
-                category: item.category || '마트/기타',
-                branch: item.branch || '지점 무관/기타',
-                price: (item.price !== null && item.price !== undefined && item.price !== '' && Number(item.price) > 0) ? Number(item.price) : null,
-                memo: item.memo ? String(item.memo) : '',
-                completed: Boolean(item.completed),
-                createdAt: item.createdAt || Date.now()
-            }));
+            return rawArray.map((item, idx) => {
+                const parsed = parseMemoKrw(item.memo);
+                const krwFromItem = (item.krwPrice !== null && item.krwPrice !== undefined && Number(item.krwPrice) > 0)
+                    ? Math.round(Number(item.krwPrice))
+                    : parsed.krwPrice;
+                return {
+                    id: item.id || ('item-' + Date.now() + '-' + idx),
+                    name: String(item.name || '이름 없음'),
+                    jpName: item.jpName ? String(item.jpName) : '',
+                    category: item.category || '마트/기타',
+                    branch: item.branch || '지점 무관/기타',
+                    price: (item.price !== null && item.price !== undefined && item.price !== '' && Number(item.price) > 0) ? Number(item.price) : null,
+                    krwPrice: krwFromItem && krwFromItem > 0 ? krwFromItem : null,
+                    memo: parsed.memo,
+                    completed: Boolean(item.completed),
+                    createdAt: item.createdAt || Date.now()
+                };
+            });
         }
 
         function syncBackupStorage() {
@@ -1738,6 +1759,7 @@
 
             if (!name) return;
 
+            const krwPrice = await yenToStoredKrw(price);
             const newItem = {
                 id: (currentListMode === 'food' ? 'food-' : 'item-') + Date.now() + '-' + Math.random().toString(36).substring(2, 7),
                 name,
@@ -1745,6 +1767,7 @@
                 category,
                 branch,
                 price,
+                krwPrice,
                 memo,
                 completed: false,
                 createdAt: Date.now()
@@ -1877,12 +1900,18 @@
             const parsedPrice = rawPrice === '' ? null : parseInt(rawPrice, 10);
             const newPrice = (parsedPrice !== null && !isNaN(parsedPrice) && parsedPrice > 0) ? parsedPrice : null;
             const newMemo = memoEl ? memoEl.value.trim() : '';
+            const oldPrice = item.price;
+            const oldKrw = item.krwPrice;
+            const krwPrice = newPrice
+                ? ((await yenToStoredKrw(newPrice)) ?? (newPrice === oldPrice ? oldKrw : null))
+                : null;
 
             item.name = newName;
             item.jpName = nameChanged ? (lookupJapaneseName(newName) || '') : newJpName;
             item.category = newCategory;
             item.branch = newBranch;
             item.price = newPrice;
+            item.krwPrice = krwPrice;
             item.memo = newMemo;
 
             editingItemId = null;
@@ -2144,6 +2173,7 @@
                                     <span class="text-sm font-extrabold ${item.completed ? 'text-slate-400 line-through' : 'text-slate-700'}">
                                         ¥${Number(item.price).toLocaleString()}
                                     </span>
+                                    ${item.krwPrice ? `<span class="block text-[10px] font-semibold ${item.completed ? 'text-slate-300' : 'text-slate-400'}">(${Number(item.krwPrice).toLocaleString()}원)</span>` : ''}
                                 </button>
                             ` : `
                                 <button type="button" onclick="startEditItem('${item.id}', event)" title="클릭하여 가격 및 정보 입력"
@@ -2187,34 +2217,35 @@
             });
         }
 
-        async function updateYenRate() {
-            const el = document.getElementById('headerFxRate');
-            if (!el) return;
+        async function fetchYenToKrw() {
             const loaders = [
                 async () => {
                     const res = await fetch('https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/jpy.min.json');
                     if (!res.ok) throw new Error('fx http');
                     const data = await res.json();
-                    return { krw: Number(data && data.jpy && data.jpy.krw), date: data && data.date };
+                    return Number(data && data.jpy && data.jpy.krw);
                 },
                 async () => {
                     const res = await fetch('https://api.frankfurter.app/latest?from=JPY&to=KRW');
                     if (!res.ok) throw new Error('fx http');
                     const data = await res.json();
-                    return { krw: Number(data && data.rates && data.rates.KRW), date: data && data.date };
+                    return Number(data && data.rates && data.rates.KRW);
                 }
             ];
             for (const load of loaders) {
                 try {
-                    const { krw, date } = await load();
-                    if (!krw) continue;
-                    el.textContent = `100엔 ≈ ${Math.round(krw * 100).toLocaleString()}원`;
-                    if (date) el.title = `${date} 기준`;
-                    return;
+                    const krw = await load();
+                    if (krw) return krw;
                 } catch (e) {}
             }
-            el.textContent = '100엔';
-            el.title = '환율을 불러오지 못했습니다';
+            return null;
+        }
+
+        async function yenToStoredKrw(yen) {
+            if (yen == null || !(Number(yen) > 0)) return null;
+            const rate = await fetchYenToKrw();
+            if (!rate) return null;
+            return Math.round(Number(yen) * rate);
         }
 
         // --- Update Header Simple Progress ---
