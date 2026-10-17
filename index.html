@@ -72,6 +72,24 @@
             border-color: #E63946 !important;
             background-color: rgba(230, 57, 70, 0.05) !important;
         }
+        .memo-marquee {
+            overflow: hidden;
+            min-width: 0;
+            flex: 1;
+        }
+        .memo-marquee-text {
+            display: inline-block;
+            white-space: nowrap;
+        }
+        .memo-marquee.is-overflow .memo-marquee-text {
+            animation-name: memo-scroll;
+            animation-timing-function: linear;
+            animation-iteration-count: infinite;
+        }
+        @keyframes memo-scroll {
+            0%, 15% { transform: translateX(0); }
+            85%, 100% { transform: translateX(var(--memo-shift, 0px)); }
+        }
     </style>
 </head>
 <body class="text-slate-800 antialiased selection:bg-osaka-red selection:text-white min-h-screen pb-16" id="dropZone">
@@ -86,12 +104,11 @@
                 </button>
                 <div class="min-w-0">
                     <div class="flex items-center gap-1.5 flex-wrap">
-                        <a href="https://www.google.com/maps/search/?api=1&query=%EC%98%A4%EC%82%AC%EC%B9%B4%20%ED%9E%88%EB%85%B8%EB%8D%B0%20%ED%98%B8%ED%85%94"
-                            target="_blank" rel="noopener noreferrer" title="오사카 히노데 호텔 위치"
+                        <button type="button" onclick="openHotelPinModal(event)" title="비밀번호 입력 후 숙소 위치 보기"
                             class="text-[10px] font-bold bg-osaka-dark hover:bg-slate-800 text-white px-2 py-0.5 rounded-full flex items-center gap-1 transition-all">
                             <i class="ph-fill ph-map-pin text-[11px]"></i>
                             <span>우리 숙소</span>
-                        </a>
+                        </button>
                         <button type="button" id="autoSaveHeaderBtn" onclick="openSyncSettings()" title="Supabase 실시간 동기화 설정"
                             class="text-[10px] font-bold bg-white/45 hover:bg-white/70 text-osaka-dark px-2 py-0.5 rounded-full flex items-center gap-1 transition-all cursor-pointer border border-osaka-dark/10">
                             <span id="autoSaveDot" class="w-1.5 h-1.5 rounded-full bg-amber-600 animate-ping"></span>
@@ -334,6 +351,31 @@
         </div>
     </div>
 
+    <!-- Hotel PIN gate -->
+    <div id="hotelPinModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4" onclick="closeHotelPinModal()">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl border border-slate-100 animate-pop" onclick="event.stopPropagation()">
+            <div class="w-12 h-12 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-2xl mb-4 mx-auto">
+                <i class="ph-fill ph-lock-key"></i>
+            </div>
+            <h3 class="text-lg font-bold text-center text-slate-800">우리 숙소</h3>
+            <p class="text-sm text-center text-slate-500 mt-2">비밀번호를 입력하면 구글맵에서 위치를 엽니다.</p>
+            <form onsubmit="submitHotelPin(event)" class="mt-4 space-y-3">
+                <input type="password" id="hotelPinInput" inputmode="numeric" autocomplete="off" maxlength="8"
+                    placeholder="비밀번호" required
+                    class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-center tracking-[0.35em] font-bold text-slate-800 focus:bg-white focus:border-osaka-red focus:outline-none focus:ring-2 focus:ring-osaka-red/20">
+                <p id="hotelPinError" class="hidden text-xs font-semibold text-osaka-red text-center">비밀번호가 올바르지 않습니다.</p>
+                <div class="flex gap-2.5">
+                    <button type="button" onclick="closeHotelPinModal()" class="flex-1 py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm transition-colors">
+                        취소
+                    </button>
+                    <button type="submit" class="flex-1 py-2.5 px-4 rounded-xl bg-osaka-dark hover:bg-slate-800 text-white font-semibold text-sm shadow-sm transition-colors">
+                        위치 열기
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Custom Confirmation Modal (No alert/confirm) -->
     <div id="confirmModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl border border-slate-100 animate-pop">
@@ -573,6 +615,46 @@
 
         function mapsSearchUrl(query) {
             return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(query);
+        }
+
+        const HOTEL_MAP_URL = mapsSearchUrl('오사카 히노데 호텔');
+        const HOTEL_PIN = '0313';
+
+        function openHotelPinModal(event) {
+            if (event) event.preventDefault();
+            const modal = document.getElementById('hotelPinModal');
+            const input = document.getElementById('hotelPinInput');
+            const err = document.getElementById('hotelPinError');
+            if (err) err.classList.add('hidden');
+            if (input) input.value = '';
+            if (modal) modal.classList.remove('hidden');
+            setTimeout(() => { if (input) input.focus(); }, 20);
+        }
+
+        function closeHotelPinModal() {
+            const modal = document.getElementById('hotelPinModal');
+            const input = document.getElementById('hotelPinInput');
+            const err = document.getElementById('hotelPinError');
+            if (modal) modal.classList.add('hidden');
+            if (input) input.value = '';
+            if (err) err.classList.add('hidden');
+        }
+
+        function submitHotelPin(event) {
+            if (event) event.preventDefault();
+            const input = document.getElementById('hotelPinInput');
+            const err = document.getElementById('hotelPinError');
+            const pin = input ? input.value.trim() : '';
+            if (pin === HOTEL_PIN) {
+                closeHotelPinModal();
+                window.open(HOTEL_MAP_URL, '_blank', 'noopener,noreferrer');
+                return;
+            }
+            if (err) err.classList.remove('hidden');
+            if (input) {
+                input.value = '';
+                input.focus();
+            }
         }
 
         function getBranchMapUrl(branch) {
@@ -1965,9 +2047,11 @@
                                 </div>
 
                                 ${item.memo ? `
-                                    <p class="text-xs text-slate-400 mt-0.5 truncate flex items-center gap-1">
-                                        <i class="ph ph-note-pencil"></i>
-                                        <span>${escapeHtml(item.memo)}</span>
+                                    <p class="text-xs text-slate-400 mt-0.5 flex items-center gap-1 min-w-0">
+                                        <i class="ph ph-note-pencil shrink-0"></i>
+                                        <span class="memo-marquee">
+                                            <span class="memo-marquee-text">${escapeHtml(item.memo)}</span>
+                                        </span>
                                     </p>
                                 ` : ''}
                             </div>
@@ -2003,6 +2087,24 @@
                     </div>
                 `;
             }).join('');
+            requestAnimationFrame(startMemoMarquees);
+        }
+
+        function startMemoMarquees() {
+            document.querySelectorAll('.memo-marquee').forEach((el) => {
+                const text = el.querySelector('.memo-marquee-text');
+                if (!text) return;
+                el.classList.remove('is-overflow');
+                text.style.removeProperty('--memo-shift');
+                text.style.animationDuration = '';
+                const overflow = text.scrollWidth - el.clientWidth;
+                if (overflow > 4) {
+                    const duration = Math.max(10, overflow / 16);
+                    text.style.setProperty('--memo-shift', `-${overflow}px`);
+                    text.style.animationDuration = `${duration}s`;
+                    el.classList.add('is-overflow');
+                }
+            });
         }
 
         // --- Update Header Simple Progress ---
