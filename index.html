@@ -566,11 +566,25 @@
             '유니버설/베이': 'ユニバーサル・スタジオ・ジャパン'
         };
 
+        function mapsSearchUrl(query) {
+            return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(query);
+        }
+
         function getBranchMapUrl(branch) {
             const name = String(branch || '').trim();
             if (!name || MAP_SKIP_BRANCHES.has(name)) return '';
             const query = BRANCH_MAP_QUERIES[name] || ('大阪 ' + name);
-            return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(query);
+            return mapsSearchUrl(query);
+        }
+
+        function getItemMapUrl(item) {
+            if (isFoodItem(item)) {
+                const place = String(item.jpName || item.name || '').trim();
+                if (!place) return '';
+                const query = place.includes('大阪') ? place : ('大阪 ' + place);
+                return mapsSearchUrl(query);
+            }
+            return getBranchMapUrl(item && item.branch);
         }
 
         function activeCatalog() {
@@ -1355,6 +1369,9 @@
             const branchSelect = document.getElementById('itemBranch');
             const customBranchInput = document.getElementById('customBranchInput');
             const selectedCatId = categorySelect.value;
+            const prevBranch = branchSelect.value;
+            const prevCustom = customBranchInput.value;
+            const wasCustom = prevBranch === '__custom__';
 
             const catObj = activeCatalog().find(c => c.id === selectedCatId);
             const branches = catObj ? catObj.branches : (currentListMode === 'food' ? FOOD_LOCATIONS : []);
@@ -1362,8 +1379,17 @@
             branchSelect.innerHTML = branches.map(b => `<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`).join('') +
                 `<option value="__custom__">✏️ 직접 입력...</option>`;
 
-            customBranchInput.classList.add('hidden');
-            customBranchInput.value = '';
+            if (wasCustom) {
+                branchSelect.value = '__custom__';
+                customBranchInput.classList.remove('hidden');
+                customBranchInput.value = prevCustom;
+            } else if (branches.includes(prevBranch)) {
+                branchSelect.value = prevBranch;
+                customBranchInput.classList.add('hidden');
+            } else {
+                customBranchInput.classList.add('hidden');
+                customBranchInput.value = '';
+            }
 
             renderBranchQuickChips(branches);
         }
@@ -1603,11 +1629,23 @@
 
             const catObj = activeCatalog().find(c => c.id === catSelect.value);
             const branches = catObj ? catObj.branches : [];
+            const prevBranch = branchSelect.value;
+            const prevCustom = customInput ? customInput.value : '';
+            const wasCustom = prevBranch === '__custom__';
 
             branchSelect.innerHTML = branches.map(b => `<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`).join('') +
                 `<option value="__custom__">✏️ 직접 입력...</option>`;
 
-            if (customInput) {
+            if (wasCustom) {
+                branchSelect.value = '__custom__';
+                if (customInput) {
+                    customInput.classList.remove('hidden');
+                    customInput.value = prevCustom;
+                }
+            } else if (branches.includes(prevBranch)) {
+                branchSelect.value = prevBranch;
+                if (customInput) customInput.classList.add('hidden');
+            } else if (customInput) {
                 customInput.classList.add('hidden');
                 customInput.value = '';
             }
@@ -1852,7 +1890,7 @@
                     `;
                 }
 
-                const mapUrl = getBranchMapUrl(branchLabel);
+                const mapUrl = getItemMapUrl(item);
                 const branchInner = `<i class="ph-fill ph-map-pin text-[10px]"></i> ${escapeHtml(branchLabel)}`;
                 const branchBadge = mapUrl
                     ? `<a href="${escapeHtml(mapUrl)}" target="_blank" rel="noopener noreferrer" title="구글맵에서 위치 보기"
