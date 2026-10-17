@@ -184,7 +184,7 @@
                 <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
                     <!-- Category Select -->
                     <div class="sm:col-span-5">
-                        <label for="itemCategory" id="labelCategory" class="block text-xs font-semibold text-slate-500 mb-1">1. 매장 분류 (카테고리)</label>
+                        <label for="itemCategory" id="labelCategory" class="block text-xs font-semibold text-slate-500 mb-1">1. 매장 분류</label>
                         <select id="itemCategory" required onchange="handleCategoryChange()"
                             class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-bold text-slate-700 focus:bg-white focus:border-osaka-red focus:outline-none focus:ring-2 focus:ring-osaka-red/20 transition-all">
                             <option value="편의점">🍙 편의점 (세븐/로손/패밀리)</option>
@@ -197,7 +197,7 @@
 
                     <!-- Branch / Brand Select -->
                     <div class="sm:col-span-7">
-                        <label for="itemBranch" id="labelBranch" class="block text-xs font-semibold text-slate-500 mb-1">2. 세부 지점 / 편의점 종류 (서브 카테고리)</label>
+                        <label for="itemBranch" id="labelBranch" class="block text-xs font-semibold text-slate-500 mb-1">2. 세부 지점 / 편의점 종류</label>
                         <div class="flex gap-2">
                             <select id="itemBranch" onchange="handleBranchSelectChange()"
                                 class="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-medium text-slate-700 focus:bg-white focus:border-osaka-red focus:outline-none focus:ring-2 focus:ring-osaka-red/20 transition-all">
@@ -765,8 +765,8 @@
             const customEl = document.getElementById('customBranchInput');
             const progressLabel = document.getElementById('headerProgressLabel');
             if (title) title.textContent = isFood ? '먹을 음식 추가하기' : '살 물건 추가하기';
-            if (labelCat) labelCat.textContent = isFood ? '1. 식당 분류' : '1. 매장 분류 (카테고리)';
-            if (labelBranch) labelBranch.textContent = isFood ? '2. 식당 위치' : '2. 세부 지점 / 편의점 종류 (서브 카테고리)';
+            if (labelCat) labelCat.textContent = isFood ? '1. 식당 분류' : '1. 매장 분류';
+            if (labelBranch) labelBranch.textContent = isFood ? '2. 식당 위치' : '2. 세부 지점 / 편의점 종류';
             if (labelName) labelName.innerHTML = isFood
                 ? '먹을 음식 / 가게 이름 <span class="text-osaka-red">*</span>'
                 : '살 물건 이름 <span class="text-osaka-red">*</span>';
@@ -1994,7 +1994,7 @@
                                 <!-- Category & Sub-branch Edit -->
                                 <div class="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
                                     <div class="sm:col-span-5">
-                                        <label class="block text-[11px] font-bold text-slate-500 mb-1">${currentListMode === 'food' ? '1. 식당 분류' : '1. 매장 분류 (카테고리)'}</label>
+                                        <label class="block text-[11px] font-bold text-slate-500 mb-1">${currentListMode === 'food' ? '1. 식당 분류' : '1. 매장 분류'}</label>
                                         <select id="edit-category-${item.id}" onchange="handleEditCategoryChange('${item.id}')"
                                             class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 focus:bg-white focus:border-osaka-red focus:outline-none">
                                             ${editableCategories.map(c => `
