@@ -383,11 +383,11 @@
             <h3 class="text-lg font-bold text-center text-slate-800">별점은 어땠나요?</h3>
             <p id="ratingModalItemName" class="text-sm text-center text-slate-500 mt-2"></p>
             <div class="flex items-center justify-center gap-1.5 mt-4" onmouseleave="hoverRatingStars(0)">
-                <button type="button" onclick="submitItemRating(1)" onmouseenter="hoverRatingStars(1)" class="rating-star-btn w-11 h-11 rounded-xl text-2xl text-amber-300 hover:bg-amber-50 transition-colors" aria-label="1점">★</button>
-                <button type="button" onclick="submitItemRating(2)" onmouseenter="hoverRatingStars(2)" class="rating-star-btn w-11 h-11 rounded-xl text-2xl text-amber-300 hover:bg-amber-50 transition-colors" aria-label="2점">★</button>
-                <button type="button" onclick="submitItemRating(3)" onmouseenter="hoverRatingStars(3)" class="rating-star-btn w-11 h-11 rounded-xl text-2xl text-amber-300 hover:bg-amber-50 transition-colors" aria-label="3점">★</button>
-                <button type="button" onclick="submitItemRating(4)" onmouseenter="hoverRatingStars(4)" class="rating-star-btn w-11 h-11 rounded-xl text-2xl text-amber-300 hover:bg-amber-50 transition-colors" aria-label="4점">★</button>
-                <button type="button" onclick="submitItemRating(5)" onmouseenter="hoverRatingStars(5)" class="rating-star-btn w-11 h-11 rounded-xl text-2xl text-amber-300 hover:bg-amber-50 transition-colors" aria-label="5점">★</button>
+                <button type="button" onclick="submitItemRating(1)" onmouseenter="hoverRatingStars(1)" class="rating-star-btn w-11 h-11 rounded-xl text-2xl text-slate-300 hover:bg-amber-50 transition-colors" aria-label="1점"><i class="ph ph-star"></i></button>
+                <button type="button" onclick="submitItemRating(2)" onmouseenter="hoverRatingStars(2)" class="rating-star-btn w-11 h-11 rounded-xl text-2xl text-slate-300 hover:bg-amber-50 transition-colors" aria-label="2점"><i class="ph ph-star"></i></button>
+                <button type="button" onclick="submitItemRating(3)" onmouseenter="hoverRatingStars(3)" class="rating-star-btn w-11 h-11 rounded-xl text-2xl text-slate-300 hover:bg-amber-50 transition-colors" aria-label="3점"><i class="ph ph-star"></i></button>
+                <button type="button" onclick="submitItemRating(4)" onmouseenter="hoverRatingStars(4)" class="rating-star-btn w-11 h-11 rounded-xl text-2xl text-slate-300 hover:bg-amber-50 transition-colors" aria-label="4점"><i class="ph ph-star"></i></button>
+                <button type="button" onclick="submitItemRating(5)" onmouseenter="hoverRatingStars(5)" class="rating-star-btn w-11 h-11 rounded-xl text-2xl text-slate-300 hover:bg-amber-50 transition-colors" aria-label="5점"><i class="ph ph-star"></i></button>
             </div>
             <p class="text-[11px] text-center text-slate-400 mt-2">별을 눌러 1~5점을 고르세요</p>
             <div class="flex gap-2.5 mt-5">
@@ -1866,6 +1866,7 @@
                 modal.classList.remove('hidden');
                 modal.style.pointerEvents = 'none';
                 ratingModalOpenedAt = Date.now();
+                hoverRatingStars(0);
                 setTimeout(() => { modal.style.pointerEvents = ''; }, 400);
             }
         }
@@ -1888,8 +1889,11 @@
 
         function hoverRatingStars(n) {
             document.querySelectorAll('.rating-star-btn').forEach((btn, i) => {
-                btn.classList.toggle('text-amber-400', i < n);
-                btn.classList.toggle('text-amber-300', i >= n);
+                const on = i < n;
+                const icon = btn.querySelector('i');
+                btn.classList.toggle('text-amber-400', on);
+                btn.classList.toggle('text-slate-300', !on);
+                if (icon) icon.className = on ? 'ph-fill ph-star' : 'ph ph-star';
             });
         }
 
