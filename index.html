@@ -96,6 +96,9 @@
 
     <!-- Top Banner / Header -->
     <header class="bg-gradient-to-r from-[#F7D048] via-[#F5C518] to-osaka-orange text-osaka-dark shadow-lg sticky top-0 z-30">
+        <div class="text-center py-0.5 px-3 text-[10px] font-semibold tracking-wide text-osaka-dark/75 bg-black/5 border-b border-osaka-dark/10">
+            <span id="headerFxRate">100엔</span>
+        </div>
         <div class="max-w-2xl mx-auto px-4 py-3.5 flex items-center justify-between gap-2">
             <div class="flex items-center space-x-2.5 min-w-0">
                 <button type="button" id="headerIconBtn" onclick="cycleHeaderIcon()" title="클릭하면 오사카 대표 이미지로 바뀝니다"
@@ -123,8 +126,7 @@
                 </div>
             </div>
             <div class="bg-white/45 backdrop-blur-md px-2 py-1 sm:px-3.5 sm:py-2 rounded-lg sm:rounded-xl text-right border border-osaka-dark/10 shrink-0">
-                <span id="headerFxRate" class="text-[10px] text-osaka-dark/70 block font-medium whitespace-nowrap">100엔</span>
-                <div class="flex items-center justify-end space-x-1 sm:space-x-1.5 sm:mt-0.5">
+                <div class="flex items-center justify-end space-x-1 sm:space-x-1.5">
                     <i class="ph-fill ph-check-circle text-osaka-teal text-xs sm:text-sm"></i>
                     <span id="headerProgressText" class="text-xs sm:text-sm font-extrabold text-osaka-dark whitespace-nowrap">0 / 0 완료</span>
                 </div>
