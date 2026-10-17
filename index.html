@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>오사카 쇼핑 리스트 (Osaka Shopping List)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Pretendard Font -->
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Pretendard', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'Roboto', 'sans-serif'],
+                    },
+                    colors: {
+                        osaka: {
+                            red: '#E63946',
+                            orange: '#F4A261',
+                            yellow: '#E9C46A',
+                            teal: '#2A9D8F',
+                            dark: '#264653',
+                            cream: '#FDFBF7'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #FDFBF7;
+            background-image: radial-gradient(#E63946 0.5px, transparent 0.5px), radial-gradient(#F4A261 0.5px, #FDFBF7 0.5px);
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 10px;
+            background-attachment: fixed;
+        }
+        /* Custom scrollbar for horizontal scrolling */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .checkbox-wrapper input:checked + div {
+            background-color: #E63946;
+            border-color: #E63946;
+        }
+        .checkbox-wrapper input:checked + div svg {
+            display: block;
+        }
+        @keyframes pop {
+            0% { transform: scale(0.95); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
+        .animate-pop {
+            animation: pop 0.2s ease-out forwards;
+        }
+    </style>
+</head>
+<body class="text-slate-800 antialiased selection:bg-osaka-red selection:text-white min-h-screen pb-12">
+
+    <!-- Top Banner / Header -->
+    <header class="bg-gradient-to-r from-osaka-red via-red-500 to-osaka-orange text-white shadow-lg sticky top-0 z-30">
+        <div class="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
+            <div class="flex items-center space-x-2.5">
+                <div class="bg-white/20 p-2 rounded-xl backdrop-blur-sm text-2xl shadow-inner">
+                    🐙
+                </div>
+                <div>
+                    <span class="text-[10px] font-bold tracking-wider uppercase bg-white/20 px-2 py-0.5 rounded-full">OSAKA SHOPPING</span>
+                    <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight mt-0.5 flex items-center gap-1">
+                        오사카 쇼핑 리스트
+                    </h1>
+                </div>
+            </div>
+            <!-- Simple Shopping Progress Badge -->
+            <div class="bg-black/20 backdrop-blur-md px-3.5 py-2 rounded-xl text-right border border-white/15">
+                <span class="text-[11px] text-white/80 block font-medium">구매 체크 현황</span>
+                <div class="flex items-center justify-end space-x-1.5 mt-0.5">
+                    <i class="ph-fill ph-check-circle text-yellow-300 text-sm"></i>
+                    <span id="headerProgressText" class="text-sm font-extrabold text-white">0 / 0 완료</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-2xl mx-auto px-4 mt-6 space-y-5">
+
+        <!-- Add Item Form -->
+        <section class="bg-white rounded-2xl p-5 shadow-md border border-slate-100">
+            <h2 class="text-base font-bold text-slate-800 mb-3.5 flex items-center gap-1.5">
+                <i class="ph-bold ph-plus-circle text-osaka-red text-lg"></i>
+                <span>살 물건 추가하기</span>
+            </h2>
+            <form id="shoppingForm" onsubmit="handleAddItem(event)" class="space-y-3.5">
+                <!-- Step 1 & 2: Category and Sub-branch Selection -->
+                <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                    <!-- Category Select -->
+                    <div class="sm:col-span-5">
+                        <label for="itemCategory" class="block text-xs font-semibold text-slate-500 mb-1">1. 매장 분류</label>
+                        <select id="itemCategory" required onchange="handleCategoryChange()"
+                            class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-bold text-slate-700 focus:bg-white focus:border-osaka-red focus:outline-none focus:ring-2 focus:ring-osaka-red/20 transition-all">
+                            <option value="편의점">🍙 편의점 (세븐/로손/패밀리)</option>
+                            <option value="돈키호테">🐧 돈키호테</option>
+                            <option value="드럭스토어">💊 드럭스토어</option>
+                            <option value="백화점/쇼핑몰">🛍️ 백화점/쇼핑몰</option>
+                            <option value="마트/기타">🛒 마트/기타</option>
+                        </select>
+                    </div>
+
+                    <!-- Branch / Brand Select -->
+                    <div class="sm:col-span-7">
+                        <label for="itemBranch" class="block text-xs font-semibold text-slate-500 mb-1">2. 세부 지점 / 편의점 종류</label>
+                        <div class="flex gap-2">
+                            <select id="itemBranch" onchange="handleBranchSelectChange()"
+                                class="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-medium text-slate-700 focus:bg-white focus:border-osaka-red focus:outline-none focus:ring-2 focus:ring-osaka-red/20 transition-all">
+                                <!-- Populated dynamically based on Category -->
+                            </select>
+                            <input type="text" id="customBranchInput" placeholder="지점명 직접 입력"
+                                class="hidden flex-1 rounded-xl border border-osaka-orange bg-amber-50/30 px-3 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:bg-white focus:border-osaka-red focus:outline-none focus:ring-2 focus:ring-osaka-red/20 transition-all">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Branch Chips for fast selection -->
+                <div id="branchQuickChips" class="flex flex-wrap gap-1.5 pt-0.5">
+                    <!-- Populated dynamically -->
+                </div>
+
+                <!-- Step 3: Item Name & Optional Price -->
+                <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 pt-1">
+                    <!-- Item Name -->
+                    <div class="sm:col-span-8">
+                        <label for="itemName" class="block text-xs font-semibold text-slate-500 mb-1">살 물건 이름 <span class="text-osaka-red">*</span></label>
+                        <input type="text" id="itemName" placeholder="예: 타마고 산도, 동전파스, 산토리 위스키" required
+                            class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:bg-white focus:border-osaka-red focus:outline-none focus:ring-2 focus:ring-osaka-red/20 transition-all">
+                    </div>
+
+                    <!-- Expected Price (Yen) - Optional -->
+                    <div class="sm:col-span-4">
+                        <label for="itemPrice" class="block text-xs font-semibold text-slate-500 mb-1 flex items-center justify-between">
+                            <span>예상 가격 (엔화)</span>
+                            <span class="text-[10px] font-normal text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">선택사항</span>
+                        </label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400 font-bold text-sm">¥</span>
+                            <input type="number" id="itemPrice" placeholder="비워두기 가능" min="0" max="9999999"
+                                class="w-full rounded-xl border border-slate-200 bg-slate-50 pl-8 pr-3.5 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:bg-white focus:border-osaka-red focus:outline-none focus:ring-2 focus:ring-osaka-red/20 transition-all">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Optional Note & Submit Button -->
+                <div class="flex flex-col sm:flex-row gap-2 pt-1">
+                    <input type="text" id="itemMemo" placeholder="메모 / 수량 (선택: 2개, 선물용, 특대 사이즈 등)"
+                        class="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs text-slate-700 placeholder-slate-400 focus:bg-white focus:border-osaka-red focus:outline-none focus:ring-2 focus:ring-osaka-red/20 transition-all">
+                    <button type="submit"
+                        class="bg-osaka-red hover:bg-red-600 active:scale-[0.99] text-white font-bold text-sm px-6 py-2.5 rounded-xl shadow-sm shadow-osaka-red/30 transition-all flex items-center justify-center gap-1.5 shrink-0">
+                        <i class="ph-bold ph-plus"></i>
+                        <span>리스트에 추가</span>
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <!-- Category & Sub-branch Filter Bar -->
+        <section class="space-y-2.5">
+            <!-- Main Category Tabs -->
+            <div class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1" id="categoryTabs">
+                <!-- Tabs rendered by JS -->
+            </div>
+
+            <!-- Sub-branch Filter Pills (Shown when a specific category is selected or for convenience stores) -->
+            <div id="subFilterContainer" class="hidden flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1 px-1 bg-white/70 rounded-xl border border-slate-200/70">
+                <!-- Sub-filters rendered by JS -->
+            </div>
+
+            <!-- Sub-controls: Count & Clear buttons -->
+            <div class="flex items-center justify-between text-xs text-slate-500 px-1 pt-1">
+                <div class="flex items-center gap-1.5">
+                    <span id="filteredCount" class="font-bold text-slate-700">총 0개</span>
+                    <span>아이템</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button onclick="requestClearCompleted()" id="btnClearCompleted" class="hover:text-osaka-red transition-colors flex items-center gap-1 hidden font-medium">
+                        <i class="ph ph-check-square"></i> 완료 항목 삭제
+                    </button>
+                    <button onclick="requestResetAll()" id="btnResetAll" class="hover:text-red-600 transition-colors flex items-center gap-1 font-medium">
+                        <i class="ph ph-trash"></i> 전체 초기화
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Shopping List Items Container -->
+        <section id="shoppingListContainer" class="space-y-2.5">
+            <!-- Items rendered dynamically here -->
+        </section>
+
+    </main>
+
+    <!-- Custom Confirmation Modal (No alert/confirm) -->
+    <div id="confirmModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl border border-slate-100 animate-pop">
+            <div class="w-12 h-12 rounded-full bg-red-100 text-osaka-red flex items-center justify-center text-2xl mb-4 mx-auto">
+                <i class="ph-fill ph-warning-circle"></i>
+            </div>
+            <h3 id="modalTitle" class="text-lg font-bold text-center text-slate-800">확인</h3>
+            <p id="modalMessage" class="text-sm text-center text-slate-500 mt-2">정말 삭제하시겠습니까?</p>
+            <div class="flex gap-2.5 mt-6">
+                <button onclick="closeConfirmModal()" class="flex-1 py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm transition-colors">
+                    취소
+                </button>
+                <button id="modalConfirmBtn" class="flex-1 py-2.5 px-4 rounded-xl bg-osaka-red hover:bg-red-600 text-white font-semibold text-sm shadow-sm transition-colors">
+                    확인
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 pointer-events-none opacity-0 transition-all duration-300 transform translate-y-2">
+        <div class="bg-slate-800/95 backdrop-blur-md text-white px-4 py-2.5 rounded-full shadow-lg text-xs font-semibold flex items-center gap-2 border border-white/10">
+            <i id="toastIcon" class="ph-fill ph-check-circle text-emerald-400 text-base"></i>
+            <span id="toastMessage">추가되었습니다!</span>
+        </div>
+    </div>
+
+    <script>
+        // --- State & Config ---
+        const STORAGE_KEY = 'osaka_shopping_list_v2';
+
+        const CATEGORIES = [
+            {
+                id: '전체',
+                label: '전체',
+                icon: '📋',
+                badgeClass: 'bg-slate-100 text-slate-700 border-slate-200',
+                branches: []
+            },
+            {
+                id: '편의점',
+                label: '편의점',
+                icon: '🍙',
+                badgeClass: 'bg-sky-50 text-sky-700 border-sky-200',
+                branches: ['세븐일레븐', '로손', '패밀리마트', '기타 편의점']
+            },
+            {
+                id: '돈키호테',
+                label: '돈키호테',
+                icon: '🐧',
+                badgeClass: 'bg-amber-50 text-amber-800 border-amber-200',
+                branches: ['도톤보리점', '도톤보리 미도스지점', '메가돈키 신세카이점', '우메다 본점', '난바 센니치마에점', '지점 무관/기타']
+            },
+            {
+                id: '드럭스토어',
+                label: '드럭스토어',
+                icon: '💊',
+                badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                branches: ['마츠모토 키요시', '다이코쿠 드럭', '선드럭', '스기약국', '코코카라파인', '지점 무관/기타']
+            },
+            {
+                id: '백화점/쇼핑몰',
+                label: '백화점/쇼핑몰',
+                icon: '🛍️',
+                badgeClass: 'bg-rose-50 text-rose-700 border-rose-200',
+                branches: ['다이마루 신사이바시', '다카시마야 난바', '한큐 우메다', '한신 우메다', '파르코(PARCO)', '기타 지점']
+            },
+            {
+                id: '마트/기타',
+                label: '마트/기타',
+                icon: '🛒',
+                badgeClass: 'bg-purple-50 text-purple-700 border-purple-200',
+                branches: ['라이프(LIFE) 마트', '이온몰/이온스타일', '로프트(LOFT)', '다이소/세리아', '칼디(KALDI)', '기타']
+            }
+        ];
+
+        // Special styling for convenience store brands
+        const BRANCH_STYLES = {
+            '세븐일레븐': 'bg-orange-50 text-orange-700 border-orange-200',
+            '로손': 'bg-blue-50 text-blue-700 border-blue-200',
+            '패밀리마트': 'bg-green-50 text-green-700 border-green-200'
+        };
+
+        let items = [];
+        let currentCategory = '전체';
+        let currentBranchFilter = '전체';
+        let editingPriceId = null;
+
+        // --- Initialization ---
+        window.addEventListener('DOMContentLoaded', () => {
+            loadFromStorage();
+            handleCategoryChange(); // Initialize branch options for default selected category
+            renderCategoryTabs();
+            renderSubFilterPills();
+            renderShoppingList();
+            updateHeaderProgress();
+        });
+
+        // --- LocalStorage Logic ---
+        function loadFromStorage() {
+            try {
+                const savedItems = localStorage.getItem(STORAGE_KEY);
+                if (savedItems) {
+                    items = JSON.parse(savedItems);
+                } else {
+                    // Initial starter items showing category + branch usage
+                    items = [
+                        { id: 'init-1', name: '타마고 산도 (계란 샌드위치)', category: '편의점', branch: '세븐일레븐', price: 280, memo: '아침 식사용', completed: false, createdAt: Date.now() - 4000 },
+                        { id: 'init-2', name: '모찌롤 케이크', category: '편의점', branch: '로손', price: 390, memo: '숙소 야식 디저트', completed: false, createdAt: Date.now() - 3000 },
+                        { id: 'init-3', name: '산토리 가쿠빈 위스키', category: '돈키호테', branch: '도톤보리 미도스지점', price: null, memo: '사람 덜 붐비는 미도스지점에서 구매', completed: false, createdAt: Date.now() - 2000 },
+                        { id: 'init-4', name: '로이히츠보코 동전파스', category: '드럭스토어', branch: '다이코쿠 드럭', price: 650, memo: '부모님 선물용 2개', completed: true, createdAt: Date.now() - 1000 }
+                    ];
+                    saveToStorage();
+                }
+            } catch (e) {
+                console.error('Failed to access localStorage:', e);
+                items = [];
+            }
+        }
+
+        function saveToStorage() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+            } catch (e) {
+                console.error('Failed to save to localStorage:', e);
+            }
+        }
+
+        // --- Form Category & Branch Dynamic Cascading ---
+        function handleCategoryChange() {
+            const categorySelect = document.getElementById('itemCategory');
+            const branchSelect = document.getElementById('itemBranch');
+            const customBranchInput = document.getElementById('customBranchInput');
+            const selectedCatId = categorySelect.value;
+
+            const catObj = CATEGORIES.find(c => c.id === selectedCatId);
+            const branches = catObj ? catObj.branches : [];
+
+            branchSelect.innerHTML = branches.map(b => `<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`).join('') +
+                `<option value="__custom__">✏️ 직접 입력...</option>`;
+
+            customBranchInput.classList.add('hidden');
+            customBranchInput.value = '';
+
+            renderBranchQuickChips(branches);
+        }
+
+        function handleBranchSelectChange() {
+            const branchSelect = document.getElementById('itemBranch');
+            const customBranchInput = document.getElementById('customBranchInput');
+            if (branchSelect.value === '__custom__') {
+                customBranchInput.classList.remove('hidden');
+                customBranchInput.focus();
+            } else {
+                customBranchInput.classList.add('hidden');
+            }
+            updateQuickChipActiveState();
+        }
+
+        function renderBranchQuickChips(branches) {
+            const chipContainer = document.getElementById('branchQuickChips');
+            const branchSelect = document.getElementById('itemBranch');
+
+            chipContainer.innerHTML = branches.map(b => {
+                const isSelected = branchSelect.value === b;
+                return `
+                    <button type="button" onclick="selectBranchChip('${escapeHtml(b)}')"
+                        class="branch-chip text-[11px] px-2.5 py-1 rounded-lg font-semibold transition-all border ${
+                            isSelected
+                            ? 'bg-osaka-red text-white border-osaka-red shadow-2xs'
+                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                        }" data-branch="${escapeHtml(b)}">
+                        ${escapeHtml(b)}
+                    </button>
+                `;
+            }).join('');
+        }
+
+        function selectBranchChip(branchName) {
+            const branchSelect = document.getElementById('itemBranch');
+            const customBranchInput = document.getElementById('customBranchInput');
+            branchSelect.value = branchName;
+            customBranchInput.classList.add('hidden');
+            updateQuickChipActiveState();
+        }
+
+        function updateQuickChipActiveState() {
+            const branchSelect = document.getElementById('itemBranch');
+            const chips = document.querySelectorAll('.branch-chip');
+            chips.forEach(chip => {
+                if (chip.getAttribute('data-branch') === branchSelect.value) {
+                    chip.className = 'branch-chip text-[11px] px-2.5 py-1 rounded-lg font-semibold transition-all border bg-osaka-red text-white border-osaka-red shadow-2xs';
+                } else {
+                    chip.className = 'branch-chip text-[11px] px-2.5 py-1 rounded-lg font-semibold transition-all border bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100';
+                }
+            });
+        }
+
+        // --- Render Category Filter Tabs & Sub-branch Filter Pills ---
+        function renderCategoryTabs() {
+            const container = document.getElementById('categoryTabs');
+            container.innerHTML = CATEGORIES.map(cat => {
+                const count = cat.id === '전체' 
+                    ? items.length 
+                    : items.filter(i => i.category === cat.id).length;
+                const isActive = currentCategory === cat.id;
+
+                return `
+                    <button onclick="selectCategory('${cat.id}')"
+                        class="shrink-0 px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border ${
+                            isActive 
+                            ? 'bg-slate-800 text-white border-slate-800 shadow-sm scale-[1.02]' 
+                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                        }">
+                        <span>${cat.icon}</span>
+                        <span>${cat.label}</span>
+                        <span class="px-1.5 py-0.2 rounded-full text-[10px] ${
+                            isActive ? 'bg-osaka-red text-white' : 'bg-slate-100 text-slate-500'
+                        }">${count}</span>
+                    </button>
+                `;
+            }).join('');
+        }
+
+        function renderSubFilterPills() {
+            const subContainer = document.getElementById('subFilterContainer');
+
+            if (currentCategory === '전체') {
+                // Show quick convenience store filter shortcuts even in '전체' view or hide if not needed
+                subContainer.classList.add('hidden');
+                return;
+            }
+
+            const catObj = CATEGORIES.find(c => c.id === currentCategory);
+            if (!catObj) {
+                subContainer.classList.add('hidden');
+                return;
+            }
+
+            // Collect predefined branches + any custom branches in user's items for this category
+            const categoryItems = items.filter(i => i.category === currentCategory);
+            const branchSet = new Set(catObj.branches);
+            categoryItems.forEach(i => {
+                if (i.branch) branchSet.add(i.branch);
+            });
+            const allBranches = ['전체', ...Array.from(branchSet)];
+
+            subContainer.classList.remove('hidden');
+            subContainer.innerHTML = `
+                <span class="text-[11px] font-bold text-slate-400 px-2 shrink-0 flex items-center gap-1">
+                    <i class="ph-fill ph-map-pin text-osaka-red"></i> 지점 필터:
+                </span>
+            ` + allBranches.map(branch => {
+                const count = branch === '전체'
+                    ? categoryItems.length
+                    : categoryItems.filter(i => i.branch === branch).length;
+                const isActive = currentBranchFilter === branch;
+
+                return `
+                    <button onclick="selectBranchFilter('${escapeHtml(branch)}')"
+                        class="shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 ${
+                            isActive
+                            ? 'bg-osaka-red text-white shadow-2xs'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }">
+                        <span>${escapeHtml(branch)}</span>
+                        <span class="text-[10px] opacity-80">(${count})</span>
+                    </button>
+                `;
+            }).join('');
+        }
+
+        function selectCategory(categoryId) {
+            currentCategory = categoryId;
+            currentBranchFilter = '전체';
+            renderCategoryTabs();
+            renderSubFilterPills();
+            renderShoppingList();
+        }
+
+        function selectBranchFilter(branchName) {
+            currentBranchFilter = branchName;
+            renderSubFilterPills();
+            renderShoppingList();
+        }
+
+        // --- Add Item Handler ---
+        function handleAddItem(e) {
+            e.preventDefault();
+            const categoryEl = document.getElementById('itemCategory');
+            const branchEl = document.getElementById('itemBranch');
+            const customBranchEl = document.getElementById('customBranchInput');
+            const nameEl = document.getElementById('itemName');
+            const priceEl = document.getElementById('itemPrice');
+            const memoEl = document.getElementById('itemMemo');
+
+            const name = nameEl.value.trim();
+            const category = categoryEl.value;
+            let branch = branchEl.value;
+            if (branch === '__custom__') {
+                branch = customBranchEl.value.trim() || '기타 지점';
+            }
+
+            const rawPrice = priceEl.value.trim();
+            const parsedPrice = rawPrice === '' ? null : parseInt(rawPrice, 10);
+            const price = (parsedPrice !== null && !isNaN(parsedPrice) && parsedPrice > 0) ? parsedPrice : null;
+            const memo = memoEl.value.trim();
+
+            if (!name) return;
+
+            const newItem = {
+                id: 'item-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7),
+                name,
+                category,
+                branch,
+                price,
+                memo,
+                completed: false,
+                createdAt: Date.now()
+            };
+
+            items.unshift(newItem);
+            saveToStorage();
+
+            // Reset inputs except category & branch
+            nameEl.value = '';
+            priceEl.value = '';
+            memoEl.value = '';
+            nameEl.focus();
+
+            // Adjust active filters if needed so user sees the newly added item
+            if (currentCategory !== '전체' && currentCategory !== category) {
+                currentCategory = '전체';
+                currentBranchFilter = '전체';
+            } else if (currentBranchFilter !== '전체' && currentBranchFilter !== branch) {
+                currentBranchFilter = '전체';
+            }
+
+            renderCategoryTabs();
+            renderSubFilterPills();
+            renderShoppingList();
+            updateHeaderProgress();
+            showToast(`'${name}' (${branch}) 추가 완료!`);
+        }
+
+        // --- Item Actions (Toggle, Delete, Inline Price Edit) ---
+        function toggleItemComplete(id) {
+            const item = items.find(i => i.id === id);
+            if (item) {
+                item.completed = !item.completed;
+                saveToStorage();
+                renderShoppingList();
+                updateHeaderProgress();
+            }
+        }
+
+        function startEditPrice(id, event) {
+            if (event) event.stopPropagation();
+            editingPriceId = id;
+            renderShoppingList();
+            setTimeout(() => {
+                const input = document.getElementById(`price-input-${id}`);
+                if (input) {
+                    input.focus();
+                    input.select();
+                }
+            }, 20);
+        }
+
+        function saveInlinePrice(id) {
+            const input = document.getElementById(`price-input-${id}`);
+            if (!input) return;
+            const rawVal = input.value.trim();
+            const parsed = rawVal === '' ? null : parseInt(rawVal, 10);
+            const newPrice = (parsed !== null && !isNaN(parsed) && parsed > 0) ? parsed : null;
+
+            const item = items.find(i => i.id === id);
+            if (item) {
+                item.price = newPrice;
+                saveToStorage();
+            }
+            editingPriceId = null;
+            renderShoppingList();
+            showToast(newPrice ? `가격이 ¥${newPrice.toLocaleString()}으로 설정되었습니다.` : '가격 미정으로 변경되었습니다.');
+        }
+
+        function cancelEditPrice(event) {
+            if (event) event.stopPropagation();
+            editingPriceId = null;
+            renderShoppingList();
+        }
+
+        function handlePriceInputKey(event, id) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                saveInlinePrice(id);
+            } else if (event.key === 'Escape') {
+                event.preventDefault();
+                cancelEditPrice(event);
+            }
+        }
+
+        function deleteItem(id) {
+            const idx = items.findIndex(i => i.id === id);
+            if (idx > -1) {
+                const removedName = items[idx].name;
+                items.splice(idx, 1);
+                saveToStorage();
+                renderCategoryTabs();
+                renderSubFilterPills();
+                renderShoppingList();
+                updateHeaderProgress();
+                showToast(`'${removedName}' 삭제되었습니다.`, 'trash');
+            }
+        }
+
+        // --- Render Shopping List ---
+        function renderShoppingList() {
+            const container = document.getElementById('shoppingListContainer');
+            let filteredItems = currentCategory === '전체'
+                ? items
+                : items.filter(item => item.category === currentCategory);
+
+            if (currentCategory !== '전체' && currentBranchFilter !== '전체') {
+                filteredItems = filteredItems.filter(item => item.branch === currentBranchFilter);
+            }
+
+            // Update count text & clear completed button visibility
+            document.getElementById('filteredCount').textContent = `총 ${filteredItems.length}개`;
+            const hasCompleted = items.some(i => i.completed);
+            const btnClearCompleted = document.getElementById('btnClearCompleted');
+            if (hasCompleted) {
+                btnClearCompleted.classList.remove('hidden');
+            } else {
+                btnClearCompleted.classList.add('hidden');
+            }
+
+            if (filteredItems.length === 0) {
+                container.innerHTML = `
+                    <div class="bg-white/80 rounded-2xl p-10 text-center border border-dashed border-slate-300 my-4">
+                        <div class="text-4xl mb-3">🛍️</div>
+                        <p class="text-sm font-bold text-slate-600">조건에 맞는 쇼핑 아이템이 없습니다.</p>
+                        <p class="text-xs text-slate-400 mt-1">위 입력창에서 지점과 물건 이름을 입력해 추가해 보세요!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Sort: uncompleted first, then by createdAt descending
+            const sortedItems = [...filteredItems].sort((a, b) => {
+                if (a.completed !== b.completed) {
+                    return a.completed ? 1 : -1;
+                }
+                return b.createdAt - a.createdAt;
+            });
+
+            container.innerHTML = sortedItems.map(item => {
+                const catObj = CATEGORIES.find(c => c.id === item.category) || CATEGORIES[5];
+                const branchLabel = item.branch || '지점 미정';
+                const branchStyle = BRANCH_STYLES[branchLabel] || 'bg-slate-100 text-slate-700 border-slate-200';
+                const hasValidPrice = item.price !== null && item.price !== undefined && Number(item.price) > 0;
+                const isEditing = editingPriceId === item.id;
+
+                let priceAreaHtml = '';
+                if (isEditing) {
+                    priceAreaHtml = `
+                        <div class="flex items-center gap-1" onclick="event.stopPropagation()">
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 flex items-center pl-2 text-slate-400 font-bold text-xs">¥</span>
+                                <input type="number" id="price-input-${item.id}" value="${hasValidPrice ? item.price : ''}" placeholder="엔화" min="0" max="9999999"
+                                    onkeydown="handlePriceInputKey(event, '${item.id}')"
+                                    class="w-24 rounded-lg border-2 border-osaka-orange bg-amber-50/40 pl-5 pr-2 py-1 text-xs font-bold text-slate-800 focus:outline-none focus:bg-white">
+                            </div>
+                            <button type="button" onclick="saveInlinePrice('${item.id}')" title="저장"
+                                class="w-7 h-7 rounded-lg bg-osaka-teal text-white hover:bg-teal-600 flex items-center justify-center shadow-2xs">
+                                <i class="ph-bold ph-check text-xs"></i>
+                            </button>
+                            <button type="button" onclick="cancelEditPrice(event)" title="취소"
+                                class="w-7 h-7 rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center">
+                                <i class="ph-bold ph-x text-xs"></i>
+                            </button>
+                        </div>
+                    `;
+                } else if (hasValidPrice) {
+                    priceAreaHtml = `
+                        <button type="button" onclick="startEditPrice('${item.id}', event)" title="클릭하여 가격 수정"
+                            class="text-right group/price hover:bg-slate-100 px-2.5 py-1.5 rounded-xl transition-colors">
+                            <div class="text-sm font-extrabold flex items-center justify-end gap-1 ${item.completed ? 'text-slate-400 line-through' : 'text-slate-700'}">
+                                <span>¥${Number(item.price).toLocaleString()}</span>
+                                <i class="ph ph-pencil-simple text-xs text-slate-300 group-hover/price:text-osaka-orange transition-colors"></i>
+                            </div>
+                        </button>
+                    `;
+                } else {
+                    priceAreaHtml = `
+                        <button type="button" onclick="startEditPrice('${item.id}', event)" title="클릭하여 가격 입력"
+                            class="px-2.5 py-1.5 rounded-xl border border-dashed border-slate-200 hover:border-osaka-orange hover:bg-amber-50/60 text-slate-400 hover:text-amber-700 transition-all flex items-center gap-1 text-[11px] font-semibold">
+                            <i class="ph-bold ph-plus-circle text-osaka-orange"></i>
+                            <span>가격 입력</span>
+                        </button>
+                    `;
+                }
+
+                return `
+                    <div class="group bg-white rounded-2xl p-4 shadow-xs border transition-all flex items-center justify-between gap-3 ${
+                        item.completed 
+                        ? 'border-slate-100 bg-slate-50/70 opacity-65' 
+                        : 'border-slate-100 hover:border-osaka-orange/60 hover:shadow-md'
+                    }">
+                        <!-- Left: Checkbox & Info -->
+                        <div class="flex items-start gap-3.5 flex-1 min-w-0 cursor-pointer" onclick="toggleItemComplete('${item.id}')">
+                            <label class="checkbox-wrapper relative flex items-center justify-center mt-1 cursor-pointer shrink-0" onclick="event.stopPropagation()">
+                                <input type="checkbox" class="sr-only" ${item.completed ? 'checked' : ''} onchange="toggleItemComplete('${item.id}')">
+                                <div class="w-5 h-5 rounded-lg border-2 border-slate-300 bg-white transition-all flex items-center justify-center">
+                                    <svg class="w-3.5 h-3.5 text-white hidden pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                </div>
+                            </label>
+
+                            <div class="flex-1 min-w-0">
+                                <!-- Category & Branch Badges -->
+                                <div class="flex items-center gap-1.5 flex-wrap">
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold border ${catObj.badgeClass}">
+                                        ${catObj.icon} ${catObj.label}
+                                    </span>
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold border ${branchStyle}">
+                                        <i class="ph-fill ph-map-pin text-[10px]"></i> ${escapeHtml(branchLabel)}
+                                    </span>
+                                    ${item.completed ? '<span class="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded">구매완료</span>' : ''}
+                                </div>
+
+                                <h3 class="text-sm sm:text-base font-bold text-slate-800 mt-1.5 truncate ${item.completed ? 'line-through text-slate-400' : ''}">
+                                    ${escapeHtml(item.name)}
+                                </h3>
+
+                                ${item.memo ? `
+                                    <p class="text-xs text-slate-400 mt-0.5 truncate flex items-center gap-1">
+                                        <i class="ph ph-note-pencil"></i>
+                                        <span>${escapeHtml(item.memo)}</span>
+                                    </p>
+                                ` : ''}
+                            </div>
+                        </div>
+
+                        <!-- Right: Optional Price & Delete -->
+                        <div class="flex items-center gap-1.5 shrink-0">
+                            ${priceAreaHtml}
+
+                            <button type="button" onclick="deleteItem('${item.id}')" title="삭제"
+                                class="w-8 h-8 rounded-xl text-slate-400 hover:text-osaka-red hover:bg-red-50 flex items-center justify-center transition-colors">
+                                <i class="ph-bold ph-trash text-base"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // --- Update Header Simple Progress ---
+        function updateHeaderProgress() {
+            const totalCount = items.length;
+            const checkedCount = items.filter(i => i.completed).length;
+            const progressEl = document.getElementById('headerProgressText');
+            if (progressEl) {
+                progressEl.textContent = `${checkedCount} / ${totalCount} 완료`;
+            }
+        }
+
+        // --- Modal & Batch Operations ---
+        let confirmCallback = null;
+
+        function openConfirmModal(title, message, onConfirm) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalMessage').textContent = message;
+            confirmCallback = onConfirm;
+            document.getElementById('confirmModal').classList.remove('hidden');
+        }
+
+        function closeConfirmModal() {
+            document.getElementById('confirmModal').classList.add('hidden');
+            confirmCallback = null;
+        }
+
+        document.getElementById('modalConfirmBtn').addEventListener('click', () => {
+            if (typeof confirmCallback === 'function') {
+                confirmCallback();
+            }
+            closeConfirmModal();
+        });
+
+        function requestClearCompleted() {
+            const completedCount = items.filter(i => i.completed).length;
+            if (completedCount === 0) return;
+
+            openConfirmModal(
+                '완료 항목 삭제',
+                `구매 완료된 ${completedCount}개의 항목을 리스트에서 삭제하시겠습니까?`,
+                () => {
+                    items = items.filter(i => !i.completed);
+                    saveToStorage();
+                    renderCategoryTabs();
+                    renderSubFilterPills();
+                    renderShoppingList();
+                    updateHeaderProgress();
+                    showToast('구매 완료 항목이 정리되었습니다.');
+                }
+            );
+        }
+
+        function requestResetAll() {
+            if (items.length === 0) {
+                showToast('이미 리스트가 비어 있습니다.');
+                return;
+            }
+
+            openConfirmModal(
+                '전체 리스트 초기화',
+                '등록된 모든 쇼핑 리스트를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.',
+                () => {
+                    items = [];
+                    saveToStorage();
+                    renderCategoryTabs();
+                    renderSubFilterPills();
+                    renderShoppingList();
+                    updateHeaderProgress();
+                    showToast('모든 리스트가 초기화되었습니다.', 'trash');
+                }
+            );
+        }
+
+        // --- Toast Notification ---
+        let toastTimeout;
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toastMessage');
+            const toastIcon = document.getElementById('toastIcon');
+
+            toastMsg.textContent = message;
+            if (type === 'trash') {
+                toastIcon.className = 'ph-fill ph-trash text-rose-400 text-base';
+            } else {
+                toastIcon.className = 'ph-fill ph-check-circle text-emerald-400 text-base';
+            }
+
+            toast.classList.remove('opacity-0', 'translate-y-2');
+            toast.classList.add('opacity-100', 'translate-y-0');
+
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.classList.remove('opacity-100', 'translate-y-0');
+                toast.classList.add('opacity-0', 'translate-y-2');
+            }, 2200);
+        }
+
+        // --- Utility: Escape HTML to prevent XSS ---
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+    </script>
+</body>
+</html>
