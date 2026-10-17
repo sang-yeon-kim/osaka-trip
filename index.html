@@ -1741,14 +1741,29 @@
                     `;
                 }
 
+                const mapUrl = getBranchMapUrl(branchLabel);
+                const branchInner = `<i class="ph-fill ph-map-pin text-[10px]"></i> ${escapeHtml(branchLabel)}`;
+                const branchBadge = mapUrl
+                    ? `<a href="${escapeHtml(mapUrl)}" target="_blank" rel="noopener noreferrer" title="구글맵에서 위치 보기"
+                            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold border whitespace-nowrap shrink-0 ${branchStyle} hover:brightness-95 hover:underline decoration-2 underline-offset-2">${branchInner}</a>`
+                    : `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold border whitespace-nowrap shrink-0 ${branchStyle}">${branchInner}</span>`;
+
                 // Normal Display Mode UI
                 return `
-                    <div class="group bg-white rounded-2xl p-4 shadow-xs border transition-all flex items-center justify-between gap-3 ${
+                    <div class="group bg-white rounded-2xl p-4 shadow-xs border transition-all flex flex-col gap-2 ${
                         item.completed 
                         ? 'border-slate-100 bg-slate-50/70 opacity-65' 
                         : 'border-slate-100 hover:border-osaka-orange/60 hover:shadow-md'
                     }">
-                        <!-- Left: Checkbox & Info -->
+                        <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold border whitespace-nowrap shrink-0 ${catObj.badgeClass}">
+                                ${catObj.icon} ${catObj.label}
+                            </span>
+                            ${branchBadge}
+                            ${item.completed ? '<span class="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded whitespace-nowrap shrink-0">구매완료</span>' : ''}
+                        </div>
+
+                        <div class="flex items-start justify-between gap-2">
                         <div class="flex items-start gap-3.5 flex-1 min-w-0">
                             <label class="checkbox-wrapper relative flex items-center justify-center mt-1 cursor-pointer shrink-0">
                                 <input type="checkbox" class="sr-only" ${item.completed ? 'checked' : ''} onchange="toggleItemComplete('${item.id}')">
@@ -1760,25 +1775,7 @@
                             </label>
 
                             <div class="flex-1 min-w-0">
-                                <!-- Category & Branch Badges -->
                                 <div class="flex items-center gap-1.5 flex-wrap">
-                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold border ${catObj.badgeClass}">
-                                        ${catObj.icon} ${catObj.label}
-                                    </span>
-                                    ${(() => {
-                                        const mapUrl = getBranchMapUrl(branchLabel);
-                                        const branchInner = `<i class="ph-fill ph-map-pin text-[10px]"></i> ${escapeHtml(branchLabel)}`;
-                                        if (!mapUrl) {
-                                            return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold border ${branchStyle}">${branchInner}</span>`;
-                                        }
-                                        return `<a href="${escapeHtml(mapUrl)}" target="_blank" rel="noopener noreferrer" title="구글맵에서 위치 보기"
-                                            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold border ${branchStyle} hover:brightness-95 hover:underline decoration-2 underline-offset-2">${branchInner}</a>`;
-                                    })()}
-                                    ${item.completed ? '<span class="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded">구매완료</span>' : ''}
-                                </div>
-
-                                <!-- Item Name + Japanese Translation Badge & Translate Button -->
-                                <div class="flex items-center gap-1.5 flex-wrap mt-1.5">
                                     <h3 class="text-sm sm:text-base font-bold text-slate-800 break-words ${item.completed ? 'line-through text-slate-400' : ''}">
                                         ${escapeHtml(item.name)}
                                     </h3>
@@ -1809,7 +1806,6 @@
                             </div>
                         </div>
 
-                        <!-- Right: Price Display, Full Edit Button & Delete Button -->
                         <div class="flex items-center gap-1.5 shrink-0">
                             ${hasValidPrice ? `
                                 <button type="button" onclick="startEditItem('${item.id}', event)" title="클릭하여 항목 수정"
@@ -1835,6 +1831,7 @@
                                 class="w-8 h-8 rounded-xl text-slate-400 hover:text-osaka-red hover:bg-red-50 flex items-center justify-center transition-colors">
                                 <i class="ph-bold ph-trash text-base"></i>
                             </button>
+                        </div>
                         </div>
                     </div>
                 `;
