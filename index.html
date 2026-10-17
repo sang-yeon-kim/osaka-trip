@@ -1716,8 +1716,8 @@
                         : 'border-slate-100 hover:border-osaka-orange/60 hover:shadow-md'
                     }">
                         <!-- Left: Checkbox & Info -->
-                        <div class="flex items-start gap-3.5 flex-1 min-w-0 cursor-pointer" onclick="toggleItemComplete('${item.id}')">
-                            <label class="checkbox-wrapper relative flex items-center justify-center mt-1 cursor-pointer shrink-0" onclick="event.stopPropagation()">
+                        <div class="flex items-start gap-3.5 flex-1 min-w-0">
+                            <label class="checkbox-wrapper relative flex items-center justify-center mt-1 cursor-pointer shrink-0">
                                 <input type="checkbox" class="sr-only" ${item.completed ? 'checked' : ''} onchange="toggleItemComplete('${item.id}')">
                                 <div class="w-5 h-5 rounded-lg border-2 border-slate-300 bg-white transition-all flex items-center justify-center">
                                     <svg class="w-3.5 h-3.5 text-white hidden pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1749,10 +1749,6 @@
                                             class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-teal-50 hover:bg-teal-100 text-osaka-teal border border-teal-200 text-xs font-extrabold transition-colors">
                                             <span>🇯🇵 ${escapeHtml(item.jpName)}</span>
                                             <i class="ph-bold ph-magnifying-glass-plus text-[11px] opacity-75"></i>
-                                        </button>
-                                        <button type="button" onclick="translateItemToJapanese('${item.id}', event)" title="일본어 다시 번역"
-                                            class="text-[11px] text-slate-400 hover:text-osaka-teal px-1 py-0.5 rounded transition-colors">
-                                            <i class="ph-bold ph-arrows-clockwise"></i>
                                         </button>
                                     ` : `
                                         <button type="button" onclick="translateItemToJapanese('${item.id}', event)"
