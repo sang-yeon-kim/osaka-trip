@@ -77,35 +77,41 @@
 <body class="text-slate-800 antialiased selection:bg-osaka-red selection:text-white min-h-screen pb-16" id="dropZone">
 
     <!-- Top Banner / Header -->
-    <header class="bg-gradient-to-r from-osaka-red via-red-500 to-osaka-orange text-white shadow-lg sticky top-0 z-30">
+    <header class="bg-gradient-to-r from-[#F7D048] via-[#F5C518] to-osaka-orange text-osaka-dark shadow-lg sticky top-0 z-30">
         <div class="max-w-2xl mx-auto px-4 py-3.5 flex items-center justify-between gap-2">
             <div class="flex items-center space-x-2.5 min-w-0">
                 <button type="button" id="headerIconBtn" onclick="cycleHeaderIcon()" title="클릭하면 오사카 대표 이미지로 바뀝니다"
-                    class="bg-white/20 hover:bg-white/30 p-2 rounded-xl backdrop-blur-sm text-2xl shadow-inner shrink-0 leading-none transition-colors">
+                    class="bg-white/50 hover:bg-white/70 p-2 rounded-xl backdrop-blur-sm text-2xl shadow-inner shrink-0 leading-none transition-colors">
                     <span id="headerIcon" aria-hidden="true">🐙</span>
                 </button>
                 <div class="min-w-0">
                     <div class="flex items-center gap-1.5 flex-wrap">
-                        <span class="text-[10px] font-bold tracking-wider uppercase bg-white/20 px-2 py-0.5 rounded-full">OSAKA SHOPPING</span>
+                        <span class="text-[10px] font-bold tracking-wider uppercase bg-white/45 px-2 py-0.5 rounded-full">OSAKA SHOPPING</span>
+                        <a href="https://www.google.com/maps/search/?api=1&query=%EC%98%A4%EC%82%AC%EC%B9%B4%20%ED%9E%88%EB%85%B8%EB%8D%B0%20%ED%98%B8%ED%85%94"
+                            target="_blank" rel="noopener noreferrer" title="오사카 히노데 호텔 위치"
+                            class="text-[10px] font-bold bg-osaka-dark hover:bg-slate-800 text-white px-2 py-0.5 rounded-full flex items-center gap-1 transition-all">
+                            <i class="ph-fill ph-map-pin text-[11px]"></i>
+                            <span>내 숙소</span>
+                        </a>
                         <button type="button" id="autoSaveHeaderBtn" onclick="openSyncSettings()" title="Supabase 실시간 동기화 설정"
-                            class="text-[10px] font-bold bg-black/25 hover:bg-black/40 text-white px-2 py-0.5 rounded-full flex items-center gap-1 transition-all cursor-pointer border border-white/20">
-                            <span id="autoSaveDot" class="w-1.5 h-1.5 rounded-full bg-amber-300 animate-ping"></span>
+                            class="text-[10px] font-bold bg-white/45 hover:bg-white/70 text-osaka-dark px-2 py-0.5 rounded-full flex items-center gap-1 transition-all cursor-pointer border border-osaka-dark/10">
+                            <span id="autoSaveDot" class="w-1.5 h-1.5 rounded-full bg-amber-600 animate-ping"></span>
                             <span id="autoSaveStatusText">☁️ 동기화 중...</span>
                         </button>
                     </div>
                     <h1 id="listTitle" contenteditable="true" spellcheck="false" lang="ko"
                         title="클릭해서 제목을 바꿀 수 있습니다"
-                        class="text-base sm:text-2xl font-extrabold tracking-tight mt-0.5 truncate cursor-text outline-none rounded-md px-0.5 -mx-0.5 focus:bg-white/15 focus:ring-2 focus:ring-white/40">
+                        class="text-base sm:text-2xl font-extrabold tracking-tight mt-0.5 truncate cursor-text outline-none rounded-md px-0.5 -mx-0.5 focus:bg-white/40 focus:ring-2 focus:ring-osaka-dark/30">
                         오사카 쇼핑 리스트
                     </h1>
                 </div>
             </div>
             <!-- Simple Shopping Progress Badge -->
-            <div class="bg-black/20 backdrop-blur-md px-2 py-1 sm:px-3.5 sm:py-2 rounded-lg sm:rounded-xl text-right border border-white/15 shrink-0">
-                <span id="headerProgressLabel" class="text-[10px] text-white/80 hidden sm:block font-medium">구매 체크 현황</span>
+            <div class="bg-white/45 backdrop-blur-md px-2 py-1 sm:px-3.5 sm:py-2 rounded-lg sm:rounded-xl text-right border border-osaka-dark/10 shrink-0">
+                <span id="headerProgressLabel" class="text-[10px] text-osaka-dark/70 hidden sm:block font-medium">구매 체크 현황</span>
                 <div class="flex items-center justify-end space-x-1 sm:space-x-1.5 sm:mt-0.5">
-                    <i class="ph-fill ph-check-circle text-yellow-300 text-xs sm:text-sm"></i>
-                    <span id="headerProgressText" class="text-xs sm:text-sm font-extrabold text-white whitespace-nowrap">0 / 0 완료</span>
+                    <i class="ph-fill ph-check-circle text-osaka-teal text-xs sm:text-sm"></i>
+                    <span id="headerProgressText" class="text-xs sm:text-sm font-extrabold text-osaka-dark whitespace-nowrap">0 / 0 완료</span>
                 </div>
             </div>
         </div>
