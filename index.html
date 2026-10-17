@@ -588,7 +588,6 @@
             fillCredentialInputs(false);
             closeSyncSettings();
             setConnectError('');
-            showToast('Supabase에 연결 중...');
             await initializeData();
             renderCategoryTabs();
             renderSubFilterPills();
@@ -706,8 +705,6 @@
                     if (seedError) {
                         console.warn('Seed failed:', seedError);
                         showToast('기존 로컬 목록을 클라우드에 올리지 못했습니다.', 'trash');
-                    } else {
-                        showToast(`로컬 ${localItems.length}개 항목을 Supabase에 올렸습니다.`);
                     }
                 }
             }
@@ -720,7 +717,6 @@
             updateAutoSaveHeaderUI('connected');
             fillCredentialInputs(true);
             setConnectError('');
-            showToast('Supabase 실시간 동기화가 연결되었습니다!');
         }
 
         function subscribeRealtime() {
@@ -793,7 +789,6 @@
                 return;
             }
             updateAutoSaveHeaderUI('connected');
-            showToast(`${actionLabel} · Supabase에 실시간 저장되었습니다!`);
         }
 
         async function persistSingleItem(item, actionLabel) {
@@ -814,7 +809,6 @@
                 return;
             }
             updateAutoSaveHeaderUI('connected');
-            showToast(`${actionLabel} · Supabase에 저장되었습니다!`);
         }
 
         async function persistDeleteByIds(ids, actionLabel) {
@@ -833,7 +827,6 @@
                 return;
             }
             updateAutoSaveHeaderUI('connected');
-            showToast(`${actionLabel} · Supabase에 반영되었습니다!`);
         }
 
         async function persistDeleteAll(actionLabel) {
@@ -851,7 +844,6 @@
                 return;
             }
             updateAutoSaveHeaderUI('connected');
-            showToast(`${actionLabel} · Supabase에 반영되었습니다!`);
         }
 
         function normalizeItems(rawArray) {
@@ -1387,19 +1379,27 @@
             renderShoppingList();
         }
 
-        async function deleteItem(id, event) {
+        function deleteItem(id, event) {
             if (event) event.stopPropagation();
-            const idx = items.findIndex(i => i.id === id);
-            if (idx > -1) {
-                const removedName = items[idx].name;
-                items.splice(idx, 1);
-                if (editingItemId === id) editingItemId = null;
-                renderCategoryTabs();
-                renderSubFilterPills();
-                renderShoppingList();
-                updateHeaderProgress();
-                await persistDeleteByIds([id], `'${removedName}' 삭제`);
-            }
+            const item = items.find(i => i.id === id);
+            if (!item) return;
+
+            openConfirmModal(
+                '삭제할까요?',
+                `'${item.name}' 항목을 리스트에서 삭제합니다.`,
+                async () => {
+                    const idx = items.findIndex(i => i.id === id);
+                    if (idx < 0) return;
+                    const removedName = items[idx].name;
+                    items.splice(idx, 1);
+                    if (editingItemId === id) editingItemId = null;
+                    renderCategoryTabs();
+                    renderSubFilterPills();
+                    renderShoppingList();
+                    updateHeaderProgress();
+                    await persistDeleteByIds([id], `'${removedName}' 삭제`);
+                }
+            );
         }
 
         // --- Render Shopping List ---
