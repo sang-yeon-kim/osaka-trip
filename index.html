@@ -80,9 +80,10 @@
     <header class="bg-gradient-to-r from-osaka-red via-red-500 to-osaka-orange text-white shadow-lg sticky top-0 z-30">
         <div class="max-w-2xl mx-auto px-4 py-3.5 flex items-center justify-between gap-2">
             <div class="flex items-center space-x-2.5 min-w-0">
-                <div class="bg-white/20 p-2 rounded-xl backdrop-blur-sm text-2xl shadow-inner shrink-0">
-                    🐙
-                </div>
+                <button type="button" id="headerIconBtn" onclick="cycleHeaderIcon()" title="클릭하면 오사카 대표 이미지로 바뀝니다"
+                    class="bg-white/20 hover:bg-white/30 p-2 rounded-xl backdrop-blur-sm text-2xl shadow-inner shrink-0 leading-none transition-colors">
+                    <span id="headerIcon" aria-hidden="true">🐙</span>
+                </button>
                 <div class="min-w-0">
                     <div class="flex items-center gap-1.5 flex-wrap">
                         <span class="text-[10px] font-bold tracking-wider uppercase bg-white/20 px-2 py-0.5 rounded-full">OSAKA SHOPPING</span>
@@ -92,7 +93,9 @@
                             <span id="autoSaveStatusText">☁️ Supabase 연결</span>
                         </button>
                     </div>
-                    <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight mt-0.5 flex items-center gap-1 truncate">
+                    <h1 id="listTitle" contenteditable="true" spellcheck="false" lang="ko"
+                        title="클릭해서 제목을 바꿀 수 있습니다"
+                        class="text-xl sm:text-2xl font-extrabold tracking-tight mt-0.5 truncate cursor-text outline-none rounded-md px-0.5 -mx-0.5 focus:bg-white/15 focus:ring-2 focus:ring-white/40">
                         오사카 쇼핑 리스트
                     </h1>
                 </div>
@@ -506,8 +509,15 @@
         const SUPABASE_ANON_KEY = 'osaka_supabase_anon_key';
         const DEFAULT_SUPABASE_URL = 'https://lyuybstutyivxagqxoxe.supabase.co';
         const DEFAULT_SUPABASE_KEY = 'sb_publishable_g2jH40oLkuTVAYvlzgn3zg_ad_HNvQN';
+        const LIST_META_ID = '__list_meta';
+        const LIST_TITLE_KEY = 'osaka_list_title';
+        const LIST_ICON_KEY = 'osaka_list_icon';
+        const DEFAULT_LIST_TITLE = '오사카 쇼핑 리스트';
+        const OSAKA_ICONS = ['🐙', '🍣', '🍜', '🍡', '🍙', '🍤', '🏯', '🌸', '🐡', '🐯', '🍵', '🥟'];
 
         let items = [];
+        let listTitle = DEFAULT_LIST_TITLE;
+        let listIcon = OSAKA_ICONS[0];
         let currentCategory = '전체';
         let currentBranchFilter = '전체';
         let editingItemId = null; // ID of item currently being edited
@@ -518,6 +528,9 @@
 
         // --- Initialization ---
         window.addEventListener('DOMContentLoaded', async () => {
+            loadListAppearanceLocal();
+            applyListAppearance();
+            setupTitleEditor();
             handleCategoryChange();
             setupDragAndDrop();
             fillCredentialInputs();
@@ -644,7 +657,7 @@
                 const primary = localStorage.getItem(BACKUP_STORAGE_KEY);
                 if (primary) {
                     const parsed = JSON.parse(primary);
-                    if (Array.isArray(parsed)) return normalizeItems(parsed);
+                    if (Array.isArray(parsed)) return normalizeItems(parsed).filter(isVisibleItem);
                 }
                 const candidateKeys = ['osaka_shopping_list_v2', 'osaka_shopping_v3_items', 'osaka_shopping_list_v1', 'osakaShoppingList'];
                 for (const key of candidateKeys) {
@@ -652,11 +665,107 @@
                     if (!raw) continue;
                     const parsed = JSON.parse(raw);
                     if (Array.isArray(parsed) && parsed.length > 0) {
-                        return normalizeItems(parsed);
+                        return normalizeItems(parsed).filter(isVisibleItem);
                     }
                 }
             } catch (e) {}
-            return normalizeItems(EMBEDDED_ITEMS);
+            return normalizeItems(EMBEDDED_ITEMS).filter(isVisibleItem);
+        }
+
+        function isVisibleItem(item) {
+            return item && item.id !== LIST_META_ID && item.category !== '__meta';
+        }
+
+        function loadListAppearanceLocal() {
+            const savedTitle = (localStorage.getItem(LIST_TITLE_KEY) || '').trim();
+            const savedIcon = (localStorage.getItem(LIST_ICON_KEY) || '').trim();
+            listTitle = savedTitle || DEFAULT_LIST_TITLE;
+            listIcon = OSAKA_ICONS.includes(savedIcon) ? savedIcon : OSAKA_ICONS[0];
+        }
+
+        function applyListAppearance() {
+            const titleEl = document.getElementById('listTitle');
+            const iconEl = document.getElementById('headerIcon');
+            if (titleEl && document.activeElement !== titleEl) {
+                titleEl.textContent = listTitle;
+            }
+            if (iconEl) iconEl.textContent = listIcon;
+            document.title = listTitle + ' (Osaka Shopping List)';
+        }
+
+        function applyMetaRow(row) {
+            if (!row) return;
+            const incoming = row.id ? row : rowToItem(row);
+            if (!incoming || incoming.id !== LIST_META_ID) return;
+            const nextTitle = (incoming.name || '').trim();
+            const nextIcon = (incoming.jpName || '').trim();
+            if (nextTitle) listTitle = nextTitle;
+            if (OSAKA_ICONS.includes(nextIcon)) listIcon = nextIcon;
+            try {
+                localStorage.setItem(LIST_TITLE_KEY, listTitle);
+                localStorage.setItem(LIST_ICON_KEY, listIcon);
+            } catch (e) {}
+            applyListAppearance();
+        }
+
+        function setupTitleEditor() {
+            const titleEl = document.getElementById('listTitle');
+            if (!titleEl) return;
+            titleEl.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    titleEl.blur();
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    titleEl.textContent = listTitle;
+                    titleEl.blur();
+                }
+            });
+            titleEl.addEventListener('blur', () => {
+                const next = titleEl.textContent.replace(/\s+/g, ' ').trim();
+                if (!next) {
+                    titleEl.textContent = listTitle;
+                    return;
+                }
+                if (next === listTitle) {
+                    titleEl.textContent = listTitle;
+                    return;
+                }
+                listTitle = next;
+                persistListAppearance();
+            });
+        }
+
+        function cycleHeaderIcon() {
+            const idx = OSAKA_ICONS.indexOf(listIcon);
+            listIcon = OSAKA_ICONS[(idx + 1) % OSAKA_ICONS.length];
+            persistListAppearance();
+        }
+
+        async function persistListAppearance() {
+            applyListAppearance();
+            try {
+                localStorage.setItem(LIST_TITLE_KEY, listTitle);
+                localStorage.setItem(LIST_ICON_KEY, listIcon);
+            } catch (e) {}
+            if (!supabaseClient) return;
+            const metaItem = {
+                id: LIST_META_ID,
+                name: listTitle,
+                jpName: listIcon,
+                category: '__meta',
+                branch: '',
+                price: null,
+                memo: '',
+                completed: false,
+                createdAt: 0
+            };
+            const { error } = await supabaseClient
+                .from('shopping_items')
+                .upsert(itemToRow(metaItem), { onConflict: 'id' });
+            if (error) {
+                showToast('제목/아이콘 저장 실패: ' + error.message, 'trash');
+            }
         }
 
         async function initializeData() {
@@ -692,7 +801,9 @@
                 return;
             }
 
-            const remoteItems = normalizeItems((data || []).map(rowToItem));
+            const remoteMeta = (data || []).find(row => row.id === LIST_META_ID);
+            if (remoteMeta) applyMetaRow(remoteMeta);
+            const remoteItems = normalizeItems((data || []).map(rowToItem)).filter(isVisibleItem);
             if (remoteItems.length > 0) {
                 items = remoteItems;
             } else {
@@ -739,8 +850,16 @@
             applyingRemoteChange = true;
             const eventType = payload.eventType || payload.event;
             try {
+                if (payload.new && payload.new.id === LIST_META_ID) {
+                    applyMetaRow(payload.new);
+                    return;
+                }
+                if (payload.old && payload.old.id === LIST_META_ID) {
+                    return;
+                }
                 if (eventType === 'INSERT' && payload.new) {
                     const incoming = rowToItem(payload.new);
+                    if (!isVisibleItem(incoming)) return;
                     if (!items.some(i => i.id === incoming.id)) {
                         items.unshift(incoming);
                     } else {
@@ -837,7 +956,7 @@
                 return;
             }
             updateAutoSaveHeaderUI('saving');
-            const { error } = await supabaseClient.from('shopping_items').delete().neq('id', '');
+            const { error } = await supabaseClient.from('shopping_items').delete().neq('id', LIST_META_ID);
             if (error) {
                 updateAutoSaveHeaderUI('error');
                 showToast(`${actionLabel} 클라우드 초기화 실패: ${error.message}`, 'trash');
