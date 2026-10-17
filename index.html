@@ -271,12 +271,21 @@
             </div>
             <div class="py-4 px-2 bg-slate-50 rounded-2xl border border-slate-200/80">
                 <p class="text-xs text-slate-400 font-semibold mb-1">すみません、これありますか？ (실례합니다, 이거 있나요?)</p>
-                <h3 id="jpZoomText" class="text-3xl sm:text-4xl font-black text-slate-900 break-words leading-tight mt-2">
-                    プリン
-                </h3>
+                <button type="button" id="jpZoomTextBtn" onclick="speakJpZoomText()" title="일본어 발음 듣기"
+                    class="w-full mt-2 rounded-2xl px-2 py-2 hover:bg-white transition-colors">
+                    <h3 id="jpZoomText" class="text-3xl sm:text-4xl font-black text-slate-900 break-words leading-tight">
+                        プリン
+                    </h3>
+                    <p class="text-[11px] font-bold text-osaka-teal mt-2 flex items-center justify-center gap-1">
+                        <i class="ph-fill ph-speaker-high"></i> 일본어를 눌러 발음 듣기
+                    </p>
+                </button>
                 <p id="jpZoomKorSub" class="text-sm font-bold text-slate-500 mt-3"></p>
             </div>
             <div class="flex gap-2">
+                <button type="button" onclick="speakJpZoomText()" class="flex-1 py-2.5 px-4 rounded-xl bg-teal-50 hover:bg-teal-100 text-osaka-teal font-bold text-xs flex items-center justify-center gap-1.5 transition-colors">
+                    <i class="ph-bold ph-speaker-high"></i> 발음 듣기
+                </button>
                 <button type="button" onclick="copyJpZoomText()" class="flex-1 py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors">
                     <i class="ph-bold ph-copy"></i> 일본어 복사
                 </button>
@@ -531,6 +540,7 @@
             loadListAppearanceLocal();
             applyListAppearance();
             setupTitleEditor();
+            warmupJapaneseVoices();
             handleCategoryChange();
             setupDragAndDrop();
             fillCredentialInputs();
@@ -1065,6 +1075,53 @@
         // =========================================================================
         // 2-B. JAPANESE TRANSLATION ENGINE (Dictionary + Live API)
         // =========================================================================
+        function lookupJapaneseName(rawName) {
+            const name = String(rawName || '').trim();
+            if (!name) return '';
+            const cleanQuery = name.replace(/\([^)]*\)/g, '').trim() || name;
+            const normalizedNoSpace = cleanQuery.replace(/\s+/g, '');
+            if (KO_JA_DICT[name]) return KO_JA_DICT[name];
+            if (KO_JA_DICT[cleanQuery]) return KO_JA_DICT[cleanQuery];
+            for (const [korKey, jpVal] of Object.entries(KO_JA_DICT)) {
+                if (korKey.replace(/\s+/g, '') === normalizedNoSpace) return jpVal;
+            }
+            return '';
+        }
+
+        async function fetchJapaneseTranslation(rawName) {
+            const name = String(rawName || '').trim();
+            if (!name) return '';
+            const fromDict = lookupJapaneseName(name);
+            if (fromDict) return fromDict;
+
+            const cleanQuery = name.replace(/\([^)]*\)/g, '').trim() || name;
+            try {
+                const gUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=ko&tl=ja&dt=t&q=${encodeURIComponent(cleanQuery)}`;
+                const gRes = await fetch(gUrl);
+                if (gRes.ok) {
+                    const gData = await gRes.json();
+                    if (Array.isArray(gData) && Array.isArray(gData[0])) {
+                        const translatedText = gData[0].map(part => part[0]).join('').trim();
+                        if (translatedText) return translatedText;
+                    }
+                }
+            } catch (e) {}
+
+            try {
+                const mUrl = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(cleanQuery)}&langpair=ko|ja`;
+                const mRes = await fetch(mUrl);
+                if (mRes.ok) {
+                    const mData = await mRes.json();
+                    if (mData && mData.responseData && mData.responseData.translatedText) {
+                        return mData.responseData.translatedText.trim();
+                    }
+                }
+            } catch (e2) {
+                console.warn('Translation API error:', e2);
+            }
+            return '';
+        }
+
         async function translateItemToJapanese(id, event) {
             if (event) event.stopPropagation();
             const item = items.find(i => i.id === id);
@@ -1073,66 +1130,18 @@
             const rawName = item.name.trim();
             if (!rawName) return;
 
-            // Remove parenthetical notes for cleaner lookup (e.g., "타마고 산도 (계란 샌드위치)" -> "타마고 산도")
-            const cleanQuery = rawName.replace(/\([^)]*\)/g, '').trim() || rawName;
-            const normalizedNoSpace = cleanQuery.replace(/\s+/g, '');
-
-            // 1. Check built-in Osaka shopping dictionary first (exact or no-space match)
-            if (KO_JA_DICT[rawName]) {
-                item.jpName = KO_JA_DICT[rawName];
+            const fromDict = lookupJapaneseName(rawName);
+            if (fromDict) {
+                item.jpName = fromDict;
                 renderShoppingList();
                 await persistSingleItem(item, `'${rawName}' → '${item.jpName}' 번역`);
                 return;
             }
-            if (KO_JA_DICT[cleanQuery]) {
-                item.jpName = KO_JA_DICT[cleanQuery];
-                renderShoppingList();
-                await persistSingleItem(item, `'${rawName}' → '${item.jpName}' 번역`);
-                return;
-            }
-            for (const [korKey, jpVal] of Object.entries(KO_JA_DICT)) {
-                if (korKey.replace(/\s+/g, '') === normalizedNoSpace) {
-                    item.jpName = jpVal;
-                    renderShoppingList();
-                    await persistSingleItem(item, `'${rawName}' → '${item.jpName}' 번역`);
-                    return;
-                }
-            }
 
-            // 2. Live API translation for any other Korean item name
             translatingItemId = id;
             renderShoppingList();
 
-            let translatedText = '';
-            try {
-                // Primary: Google Translate free GTX endpoint (fast & accurate for shopping nouns like 푸딩 -> プリン)
-                const gUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=ko&tl=ja&dt=t&q=${encodeURIComponent(cleanQuery)}`;
-                const gRes = await fetch(gUrl);
-                if (gRes.ok) {
-                    const gData = await gRes.json();
-                    if (Array.isArray(gData) && Array.isArray(gData[0])) {
-                        translatedText = gData[0].map(part => part[0]).join('').trim();
-                    }
-                }
-            } catch (e) {
-                // Fallback to MyMemory Translation API
-            }
-
-            if (!translatedText) {
-                try {
-                    const mUrl = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(cleanQuery)}&langpair=ko|ja`;
-                    const mRes = await fetch(mUrl);
-                    if (mRes.ok) {
-                        const mData = await mRes.json();
-                        if (mData && mData.responseData && mData.responseData.translatedText) {
-                            translatedText = mData.responseData.translatedText.trim();
-                        }
-                    }
-                } catch (e2) {
-                    console.warn('Translation API error:', e2);
-                }
-            }
-
+            const translatedText = await fetchJapaneseTranslation(rawName);
             translatingItemId = null;
 
             if (translatedText) {
@@ -1156,6 +1165,37 @@
 
         function closeJpZoomModal() {
             document.getElementById('jpZoomModal').classList.add('hidden');
+            if (window.speechSynthesis) window.speechSynthesis.cancel();
+        }
+
+        function warmupJapaneseVoices() {
+            if (!window.speechSynthesis) return;
+            window.speechSynthesis.getVoices();
+            window.speechSynthesis.addEventListener('voiceschanged', () => {
+                window.speechSynthesis.getVoices();
+            });
+        }
+
+        function getJapaneseVoice() {
+            if (!window.speechSynthesis) return null;
+            const voices = window.speechSynthesis.getVoices() || [];
+            return voices.find(v => v.lang && v.lang.toLowerCase().startsWith('ja')) || null;
+        }
+
+        function speakJpZoomText() {
+            const text = (document.getElementById('jpZoomText').textContent || '').trim();
+            if (!text) return;
+            if (!window.speechSynthesis) {
+                showToast('이 브라우저에서는 일본어 발음 재생을 지원하지 않습니다.', 'trash');
+                return;
+            }
+            window.speechSynthesis.cancel();
+            const utter = new SpeechSynthesisUtterance(text);
+            utter.lang = 'ja-JP';
+            utter.rate = 0.9;
+            const voice = getJapaneseVoice();
+            if (voice) utter.voice = voice;
+            window.speechSynthesis.speak(utter);
         }
 
         function copyJpZoomText() {
@@ -1356,7 +1396,7 @@
             const newItem = {
                 id: 'item-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7),
                 name,
-                jpName: '',
+                jpName: lookupJapaneseName(name),
                 category,
                 branch,
                 price,
@@ -1386,6 +1426,9 @@
             updateHeaderProgress();
 
             await persistSingleItem(newItem, `'${name}' 추가`);
+            if (!newItem.jpName) {
+                translateItemToJapanese(newItem.id);
+            }
         }
 
         async function toggleItemComplete(id) {
