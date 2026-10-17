@@ -837,6 +837,7 @@
             renderSubFilterPills();
             renderShoppingList();
             updateHeaderProgress();
+            await refreshAllItemKrwPrices();
         });
 
         // =========================================================================
@@ -2217,7 +2218,10 @@
             });
         }
 
+        let yenToKrwRate = null;
+
         async function fetchYenToKrw() {
+            if (yenToKrwRate) return yenToKrwRate;
             const loaders = [
                 async () => {
                     const res = await fetch('https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/jpy.min.json');
@@ -2235,7 +2239,10 @@
             for (const load of loaders) {
                 try {
                     const krw = await load();
-                    if (krw) return krw;
+                    if (krw) {
+                        yenToKrwRate = krw;
+                        return krw;
+                    }
                 } catch (e) {}
             }
             return null;
@@ -2246,6 +2253,41 @@
             const rate = await fetchYenToKrw();
             if (!rate) return null;
             return Math.round(Number(yen) * rate);
+        }
+
+        function applyKrwRateToItems(rate) {
+            if (!rate) return false;
+            let changed = false;
+            items.forEach((item) => {
+                if (!isVisibleItem(item)) return;
+                if (item.price && Number(item.price) > 0) {
+                    const next = Math.round(Number(item.price) * rate);
+                    if (item.krwPrice !== next) {
+                        item.krwPrice = next;
+                        changed = true;
+                    }
+                } else if (item.krwPrice) {
+                    item.krwPrice = null;
+                    changed = true;
+                }
+            });
+            return changed;
+        }
+
+        async function refreshAllItemKrwPrices() {
+            const rate = await fetchYenToKrw();
+            if (!rate) return;
+            const changed = applyKrwRateToItems(rate);
+            renderShoppingList();
+            if (!changed) return;
+            syncBackupStorage();
+            if (!supabaseClient || applyingRemoteChange) return;
+            const rows = items.filter(isVisibleItem).map(itemToRow);
+            if (!rows.length) return;
+            const { error } = await supabaseClient
+                .from('shopping_items')
+                .upsert(rows, { onConflict: 'id' });
+            if (error) console.warn('KRW refresh save failed:', error);
         }
 
         // --- Update Header Simple Progress ---
