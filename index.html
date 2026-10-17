@@ -579,9 +579,12 @@
 
         function getItemMapUrl(item) {
             if (isFoodItem(item)) {
-                const place = String(item.jpName || item.name || '').trim();
+                const place = String(item.name || '').trim();
                 if (!place) return '';
-                const query = place.includes('大阪') ? place : ('大阪 ' + place);
+                const location = String(item.branch || '').trim();
+                const query = (location && !MAP_SKIP_BRANCHES.has(location))
+                    ? `${location} ${place}`
+                    : place;
                 return mapsSearchUrl(query);
             }
             return getBranchMapUrl(item && item.branch);
