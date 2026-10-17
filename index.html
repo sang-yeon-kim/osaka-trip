@@ -122,9 +122,8 @@
                     </h1>
                 </div>
             </div>
-            <!-- Simple Shopping Progress Badge -->
             <div class="bg-white/45 backdrop-blur-md px-2 py-1 sm:px-3.5 sm:py-2 rounded-lg sm:rounded-xl text-right border border-osaka-dark/10 shrink-0">
-                <span id="headerProgressLabel" class="text-[10px] text-osaka-dark/70 hidden sm:block font-medium">구매 체크 현황</span>
+                <span id="headerFxRate" class="text-[10px] text-osaka-dark/70 block font-medium whitespace-nowrap">100엔</span>
                 <div class="flex items-center justify-end space-x-1 sm:space-x-1.5 sm:mt-0.5">
                     <i class="ph-fill ph-check-circle text-osaka-teal text-xs sm:text-sm"></i>
                     <span id="headerProgressText" class="text-xs sm:text-sm font-extrabold text-osaka-dark whitespace-nowrap">0 / 0 완료</span>
@@ -763,7 +762,6 @@
             const nameEl = document.getElementById('itemName');
             const memoEl = document.getElementById('itemMemo');
             const customEl = document.getElementById('customBranchInput');
-            const progressLabel = document.getElementById('headerProgressLabel');
             if (title) title.textContent = isFood ? '먹을 음식 추가하기' : '살 물건 추가하기';
             if (labelCat) labelCat.textContent = isFood ? '1. 식당 분류' : '1. 매장 분류';
             if (labelBranch) labelBranch.textContent = isFood ? '2. 식당 위치' : '2. 세부 지점 / 편의점 종류';
@@ -773,7 +771,6 @@
             if (nameEl) nameEl.placeholder = isFood ? '예: 치보 오코노미야키, 이치란 라멘' : '예: 타마고 산도, 동전파스, 산토리 위스키';
             if (memoEl) memoEl.placeholder = isFood ? '메모 (선택: 줄 서는 곳, 2인, 점심 등)' : '메모 / 수량 (선택: 2개, 선물용, 특대 사이즈 등)';
             if (customEl) customEl.placeholder = isFood ? '위치 직접 입력' : '지점명 직접 입력';
-            if (progressLabel) progressLabel.textContent = isFood ? '식사 체크 현황' : '구매 체크 현황';
         }
 
         function setListMode(mode) {
@@ -836,6 +833,7 @@
             handleCategoryChange();
             setupDragAndDrop();
             fillCredentialInputs();
+            updateYenRate();
             await initializeData();
             renderCategoryTabs();
             renderSubFilterPills();
@@ -2185,6 +2183,24 @@
                     el.classList.add('is-overflow');
                 }
             });
+        }
+
+        async function updateYenRate() {
+            const el = document.getElementById('headerFxRate');
+            if (!el) return;
+            try {
+                const res = await fetch('https://api.frankfurter.app/latest?from=JPY&to=KRW');
+                if (!res.ok) throw new Error('fx http');
+                const data = await res.json();
+                const krw = Number(data && data.rates && data.rates.KRW);
+                if (!krw) throw new Error('fx empty');
+                const per100 = Math.round(krw * 100);
+                el.textContent = `100엔 ≈ ${per100.toLocaleString()}원`;
+                if (data.date) el.title = `${data.date} 기준`;
+            } catch (e) {
+                el.textContent = '100엔';
+                el.title = '환율을 불러오지 못했습니다';
+            }
         }
 
         // --- Update Header Simple Progress ---
