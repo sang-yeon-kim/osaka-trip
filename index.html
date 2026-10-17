@@ -185,9 +185,8 @@
                 <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 pt-1">
                     <!-- Item Name (Pure native text input with lang="ko" for natural IME behavior) -->
                     <div class="sm:col-span-8">
-                        <label for="itemName" class="block text-xs font-semibold text-slate-500 mb-1 flex items-center justify-between">
-                            <span>살 물건 이름 <span class="text-osaka-red">*</span></span>
-                            <span class="text-[10px] font-normal text-slate-400">현재 키보드 한/영 상태 그대로 입력</span>
+                        <label for="itemName" class="block text-xs font-semibold text-slate-500 mb-1">
+                            살 물건 이름 <span class="text-osaka-red">*</span>
                         </label>
                         <input type="text" id="itemName" lang="ko" autocomplete="off" spellcheck="false"
                             placeholder="예: 타마고 산도, 동전파스, 산토리 위스키" required
@@ -506,6 +505,40 @@
                 branches: ['라이프(LIFE) 마트', '이온몰/이온스타일', '로프트(LOFT)', '다이소/세리아', '칼디(KALDI)', '기타']
             }
         ];
+
+        const MAP_SKIP_BRANCHES = new Set(['지점 무관/기타', '기타 편의점', '기타 지점', '기타', '지점 미정']);
+        const BRANCH_MAP_QUERIES = {
+            '세븐일레븐': '大阪 セブンイレブン',
+            '로손': '大阪 ローソン',
+            '패밀리마트': '大阪 ファミリーマート',
+            '도톤보리점': 'ドンキホーテ 道頓堀店 大阪',
+            '도톤보리 미도스지점': 'ドンキホーテ 道頓堀店御堂筋 大阪',
+            '메가돈키 신세카이점': 'メガドンキホーテ 新世界店 大阪',
+            '우메다 본점': 'ドンキホーテ 梅田本店 大阪',
+            '난바 센니치마에점': 'ドンキホーテ なんば千日前店 大阪',
+            '마츠모토 키요시': 'マツモトキヨシ 大阪',
+            '다이코쿠 드럭': 'ダイコクドラッグ 大阪',
+            '선드럭': 'サンドラッグ 大阪',
+            '스기약국': 'スギ薬局 大阪',
+            '코코카라파인': 'ココカラファイン 大阪',
+            '다이마루 신사이바시': '大丸心斎橋店 大阪',
+            '다카시마야 난바': '高島屋 大阪 難波',
+            '한큐 우메다': '阪急うめだ本店',
+            '한신 우메다': '阪神梅田本店',
+            '파르코(PARCO)': '心斎橋PARCO 大阪',
+            '라이프(LIFE) 마트': 'ライフ 大阪',
+            '이온몰/이온스타일': 'イオンモール 大阪',
+            '로프트(LOFT)': 'LOFT 大阪',
+            '다이소/세리아': 'ダイソー 大阪',
+            '칼디(KALDI)': 'カルディ 大阪'
+        };
+
+        function getBranchMapUrl(branch) {
+            const name = String(branch || '').trim();
+            if (!name || MAP_SKIP_BRANCHES.has(name)) return '';
+            const query = BRANCH_MAP_QUERIES[name] || ('大阪 ' + name);
+            return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(query);
+        }
 
         const BRANCH_STYLES = {
             '세븐일레븐': 'bg-orange-50 text-orange-700 border-orange-200',
@@ -1732,9 +1765,15 @@
                                     <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold border ${catObj.badgeClass}">
                                         ${catObj.icon} ${catObj.label}
                                     </span>
-                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold border ${branchStyle}">
-                                        <i class="ph-fill ph-map-pin text-[10px]"></i> ${escapeHtml(branchLabel)}
-                                    </span>
+                                    ${(() => {
+                                        const mapUrl = getBranchMapUrl(branchLabel);
+                                        const branchInner = `<i class="ph-fill ph-map-pin text-[10px]"></i> ${escapeHtml(branchLabel)}`;
+                                        if (!mapUrl) {
+                                            return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold border ${branchStyle}">${branchInner}</span>`;
+                                        }
+                                        return `<a href="${escapeHtml(mapUrl)}" target="_blank" rel="noopener noreferrer" title="구글맵에서 위치 보기"
+                                            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold border ${branchStyle} hover:brightness-95 hover:underline decoration-2 underline-offset-2">${branchInner}</a>`;
+                                    })()}
                                     ${item.completed ? '<span class="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded">구매완료</span>' : ''}
                                 </div>
 
