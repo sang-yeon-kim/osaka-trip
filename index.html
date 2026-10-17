@@ -1642,11 +1642,12 @@
 
             const newName = nameEl ? nameEl.value.trim() : '';
             if (!newName) {
-                showToast('살 물건 이름을 입력해주세요.', 'trash');
+                showToast(currentListMode === 'food' ? '음식/식당 이름을 입력해주세요.' : '살 물건 이름을 입력해주세요.', 'trash');
                 if (nameEl) nameEl.focus();
                 return;
             }
 
+            const nameChanged = newName !== (item.name || '').trim();
             const newJpName = jpNameEl ? jpNameEl.value.trim() : '';
             const newCategory = catEl ? catEl.value : item.category;
             let newBranch = branchEl ? branchEl.value : item.branch;
@@ -1660,7 +1661,7 @@
             const newMemo = memoEl ? memoEl.value.trim() : '';
 
             item.name = newName;
-            item.jpName = newJpName;
+            item.jpName = nameChanged ? (lookupJapaneseName(newName) || '') : newJpName;
             item.category = newCategory;
             item.branch = newBranch;
             item.price = newPrice;
@@ -1672,6 +1673,9 @@
             renderSubFilterPills();
             renderShoppingList();
             await persistSingleItem(item, `'${newName}' 수정`);
+            if (nameChanged && !item.jpName) {
+                await translateItemToJapanese(id);
+            }
         }
 
         function cancelEditItem(event) {
