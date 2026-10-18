@@ -2283,7 +2283,7 @@
                 text.style.animationDuration = '';
                 const overflow = text.scrollWidth - el.clientWidth;
                 if (overflow > 4) {
-                    const duration = Math.max(4, overflow / 48);
+                    const duration = Math.max(2, overflow / 48);
                     text.style.setProperty('--memo-shift', `-${overflow}px`);
                     text.style.animationDuration = `${duration}s`;
                     el.classList.add('is-overflow');
