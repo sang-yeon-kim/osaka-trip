@@ -607,6 +607,23 @@
             return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(query);
         }
 
+        function shopImageSearchQuery(item) {
+            const name = String((item && item.name) || '').trim();
+            const category = String((item && item.category) || '').trim();
+            if (category === '돈키호테') {
+                return ['오사카', '돈키호테', name].filter(Boolean).join(' ');
+            }
+            const branch = String((item && item.branch) || '').trim();
+            const place = (branch && !MAP_SKIP_BRANCHES.has(branch))
+                ? branch.replace(/^오사카\s+/, '')
+                : '';
+            return ['오사카', place, name].filter(Boolean).join(' ');
+        }
+
+        function shopImageSearchUrl(item) {
+            return 'https://www.google.com/search?tbm=isch&q=' + encodeURIComponent(shopImageSearchQuery(item));
+        }
+
         const HOTEL_MAP_URL = mapsSearchUrl('오사카 히노데 호텔');
         const HOTEL_PIN_HASH = '62a728b0b2cb8efb20f13941e7fe44058122f9869ab0a9d970fcd5080d0eae86';
         const EDIT_UNLOCK_KEY = 'osaka_list_edit_unlocked_v1';
@@ -2257,7 +2274,7 @@
                                     <h3 class="text-sm sm:text-base font-bold text-slate-800 break-words ${item.completed ? 'line-through text-slate-400' : ''}">
                                         ${currentListMode === 'food' || isFoodItem(item)
                                             ? escapeHtml(item.name)
-                                            : `<a href="https://www.google.com/search?tbm=isch&q=${encodeURIComponent(item.name)}" target="_blank" rel="noopener noreferrer" title="구글 이미지에서 검색" class="hover:text-osaka-red hover:underline decoration-2 underline-offset-2">${escapeHtml(item.name)}</a>`}
+                                            : `<a href="${shopImageSearchUrl(item)}" target="_blank" rel="noopener noreferrer" title="구글 이미지에서 검색: ${escapeHtml(shopImageSearchQuery(item))}" class="hover:text-osaka-red hover:underline decoration-2 underline-offset-2">${escapeHtml(item.name)}</a>`}
                                     </h3>
 
                                     ${item.jpName ? `
