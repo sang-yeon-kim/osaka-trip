@@ -49,6 +49,48 @@
             -ms-overflow-style: none;
             scrollbar-width: none;
         }
+        .h-scroll {
+            overflow-x: auto;
+            overflow-y: hidden;
+            flex-wrap: nowrap;
+            min-width: 0;
+            width: 100%;
+            overscroll-behavior-x: contain;
+            -webkit-overflow-scrolling: touch;
+            cursor: grab;
+        }
+        .h-scroll.is-dragging {
+            cursor: grabbing;
+            user-select: none;
+        }
+        @media (max-width: 639px) {
+            .h-scroll {
+                scrollbar-width: none;
+            }
+            .h-scroll::-webkit-scrollbar {
+                display: none;
+            }
+        }
+        @media (min-width: 640px) {
+            .h-scroll {
+                scrollbar-width: thin;
+                scrollbar-color: #cbd5e1 transparent;
+            }
+            .h-scroll::-webkit-scrollbar {
+                display: block;
+                height: 8px;
+            }
+            .h-scroll::-webkit-scrollbar-track {
+                background: transparent;
+            }
+            .h-scroll::-webkit-scrollbar-thumb {
+                background: #cbd5e1;
+                border-radius: 999px;
+            }
+            .h-scroll::-webkit-scrollbar-thumb:hover {
+                background: #94a3b8;
+            }
+        }
         .checkbox-wrapper input:checked + div {
             background-color: #E63946;
             border-color: #E63946;
@@ -96,7 +138,7 @@
 
     <!-- Top Banner / Header -->
     <header class="bg-gradient-to-r from-osaka-red via-red-500 to-osaka-orange text-white shadow-lg sticky top-0 z-30">
-        <div class="max-w-2xl mx-auto px-4 py-3.5 flex items-center gap-2">
+        <div class="max-w-2xl mx-auto px-4 py-3.5 flex items-end justify-between gap-3">
             <div class="flex items-center space-x-2.5 min-w-0">
                 <button type="button" id="headerIconBtn" onclick="cycleHeaderIcon()" title="클릭하면 오사카 대표 이미지로 바뀝니다"
                     class="bg-white/20 hover:bg-white/30 p-2 rounded-xl backdrop-blur-sm text-2xl shadow-inner shrink-0 leading-none transition-colors">
@@ -109,11 +151,6 @@
                             <i class="ph-fill ph-map-pin text-[11px]"></i>
                             <span>우리 숙소</span>
                         </button>
-                        <span id="autoSaveHeaderBtn" title="실시간 동기화 상태"
-                            class="text-[10px] font-bold bg-black/25 text-white px-2 py-0.5 rounded-full flex items-center gap-1 border border-white/20">
-                            <span id="autoSaveDot" class="w-1.5 h-1.5 rounded-full bg-amber-300 animate-ping"></span>
-                            <span id="autoSaveStatusText">☁️ 동기화 중...</span>
-                        </span>
                     </div>
                     <h1 id="listTitle" contenteditable="false" spellcheck="false" lang="ko"
                         title="비밀번호 입력 후 제목을 바꿀 수 있습니다"
@@ -122,6 +159,11 @@
                     </h1>
                 </div>
             </div>
+            <span id="autoSaveHeaderBtn" title="실시간 동기화 상태"
+                class="shrink-0 text-[10px] font-bold bg-black/25 text-white px-2 py-0.5 rounded-full flex items-center gap-1 border border-white/20 mb-0.5">
+                <span id="autoSaveDot" class="w-1.5 h-1.5 rounded-full bg-amber-300 animate-ping"></span>
+                <span id="autoSaveStatusText">☁️ 동기화 중...</span>
+            </span>
         </div>
     </header>
 
@@ -248,12 +290,12 @@
         <!-- Category & Sub-branch Filter Bar -->
         <section class="space-y-2.5">
             <!-- Main Category Tabs -->
-            <div class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1" id="categoryTabs">
+            <div class="flex items-center gap-2 h-scroll py-1" id="categoryTabs">
                 <!-- Tabs rendered by JS -->
             </div>
 
             <!-- Sub-branch Filter Pills (Shown when a specific category is selected) -->
-            <div id="subFilterContainer" class="hidden flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1.5 px-2 bg-white/80 rounded-xl border border-slate-200/70">
+            <div id="subFilterContainer" class="hidden flex items-center gap-1.5 h-scroll py-1.5 px-2 bg-white/80 rounded-xl border border-slate-200/70">
                 <!-- Sub-filters rendered by JS -->
             </div>
 
@@ -659,6 +701,11 @@
         }
 
         function openHotelPinModal(event) {
+            if (event) event.preventDefault();
+            if (isEditUnlocked()) {
+                window.open(HOTEL_MAP_URL, '_blank', 'noopener,noreferrer');
+                return;
+            }
             openPinModal('hotel', event);
         }
 
@@ -680,7 +727,7 @@
                 messageEl.textContent = pinModalPurpose === 'title'
                     ? '비밀번호를 입력하면 제목을 바꿀 수 있습니다.'
                     : (pinModalPurpose === 'edit'
-                        ? '처음 한 번만 비밀번호를 입력하면, 이 브라우저에서는 추가·수정·삭제를 바로 할 수 있습니다.'
+                        ? '처음 한 번만 비밀번호를 입력하면, 이 브라우저에서는 리스트 수정·숙소 위치·제목 변경을 바로 할 수 있습니다.'
                         : '비밀번호를 입력하면 구글맵에서 위치를 엽니다.');
             }
             if (submitEl) {
@@ -737,11 +784,11 @@
                 ok = false;
             }
             if (ok) {
+                setEditUnlocked();
                 const unlockFn = pendingEditUnlock;
                 pendingEditUnlock = null;
                 closeHotelPinModal();
                 if (purpose === 'edit') {
-                    setEditUnlocked();
                     if (typeof unlockFn === 'function') unlockFn(true);
                 } else if (purpose === 'title') {
                     beginTitleEdit();
@@ -883,6 +930,7 @@
             applyListModeUi();
             handleCategoryChange();
             setupDragAndDrop();
+            setupHorizontalScrolls();
             fillCredentialInputs();
             await initializeData();
             renderCategoryTabs();
@@ -1097,6 +1145,10 @@
             titleEl.addEventListener('click', (e) => {
                 if (titleEl.getAttribute('contenteditable') === 'true') return;
                 e.preventDefault();
+                if (isEditUnlocked()) {
+                    beginTitleEdit();
+                    return;
+                }
                 openPinModal('title', e);
             });
             titleEl.addEventListener('keydown', (e) => {
@@ -1462,6 +1514,64 @@
             } catch (err) {
                 showToast('JSON 파일을 읽는 중 오류가 발생했습니다.', 'trash');
             }
+        }
+
+        function setupHorizontalScrolls() {
+            document.querySelectorAll('.h-scroll').forEach((el) => {
+                if (el.dataset.hScrollBound === '1') return;
+                el.dataset.hScrollBound = '1';
+                let dragging = false;
+                let moved = false;
+                let startX = 0;
+                let startLeft = 0;
+
+                el.addEventListener('wheel', (e) => {
+                    if (el.scrollWidth <= el.clientWidth + 1) return;
+                    const delta = Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+                    if (!delta) return;
+                    el.scrollLeft += delta;
+                    e.preventDefault();
+                }, { passive: false });
+
+                el.addEventListener('pointerdown', (e) => {
+                    if (e.pointerType === 'touch') return;
+                    if (e.button !== 0) return;
+                    dragging = true;
+                    moved = false;
+                    startX = e.clientX;
+                    startLeft = el.scrollLeft;
+                });
+
+                el.addEventListener('pointermove', (e) => {
+                    if (!dragging) return;
+                    const dx = e.clientX - startX;
+                    if (Math.abs(dx) > 6) {
+                        moved = true;
+                        el.classList.add('is-dragging');
+                        el.setPointerCapture(e.pointerId);
+                    }
+                    if (moved) {
+                        el.scrollLeft = startLeft - dx;
+                    }
+                });
+
+                const endDrag = (e) => {
+                    if (!dragging) return;
+                    dragging = false;
+                    el.classList.remove('is-dragging');
+                    if (moved) {
+                        e.preventDefault();
+                    }
+                };
+                el.addEventListener('pointerup', endDrag);
+                el.addEventListener('pointercancel', endDrag);
+                el.addEventListener('click', (e) => {
+                    if (!moved) return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    moved = false;
+                }, true);
+            });
         }
 
         // Drag and Drop JSON file onto page
@@ -1941,15 +2051,18 @@
         }
 
         // Open full inline editor for an item (Name, Japanese Name, Category, Sub-branch, Price, Memo)
-        async function startEditItem(id, event) {
+        async function startEditItem(id, event, focusField) {
             if (event) event.stopPropagation();
             if (!(await ensureEditUnlocked())) return;
             editingItemId = id;
             renderShoppingList();
             setTimeout(() => {
-                const nameInput = document.getElementById(`edit-name-${id}`);
-                if (nameInput) {
-                    nameInput.focus();
+                const target = focusField === 'price'
+                    ? document.getElementById(`edit-price-${id}`)
+                    : document.getElementById(`edit-name-${id}`);
+                if (target) {
+                    target.focus();
+                    if (focusField === 'price' && typeof target.select === 'function') target.select();
                 }
             }, 20);
         }
@@ -2307,7 +2420,7 @@
 
                         <div class="flex items-center gap-1.5 shrink-0">
                             ${hasValidPrice ? `
-                                <button type="button" onclick="startEditItem('${item.id}', event)" title="클릭하여 항목 수정"
+                                <button type="button" onclick="startEditItem('${item.id}', event, 'price')" title="클릭하여 가격 수정"
                                     class="text-right hover:bg-slate-100 px-2.5 py-1.5 rounded-xl transition-colors">
                                     <span class="text-sm font-extrabold ${item.completed ? 'text-slate-400 line-through' : 'text-slate-700'}">
                                         ¥${Number(item.price).toLocaleString()}
@@ -2315,7 +2428,7 @@
                                     ${item.krwPrice ? `<span class="block text-[10px] font-semibold ${item.completed ? 'text-slate-300' : 'text-slate-400'}">(${Number(item.krwPrice).toLocaleString()}원)</span>` : ''}
                                 </button>
                             ` : `
-                                <button type="button" onclick="startEditItem('${item.id}', event)" title="클릭하여 가격 및 정보 입력"
+                                <button type="button" onclick="startEditItem('${item.id}', event, 'price')" title="클릭하여 가격 및 정보 입력"
                                     class="px-2 py-1 rounded-lg border border-dashed border-slate-200 hover:border-osaka-orange text-slate-400 hover:text-amber-700 text-[11px] font-semibold transition-colors">
                                     가격 미정
                                 </button>
