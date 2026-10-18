@@ -2436,8 +2436,8 @@
                             </button>
 
                             <div class="flex-1 min-w-0">
-                                <div class="flex items-center gap-1 min-w-0">
-                                    <h3 class="text-sm sm:text-base font-bold text-slate-800 min-w-0 truncate ${item.completed ? 'line-through text-slate-400' : ''}">
+                                <div class="flex items-center gap-1 flex-wrap">
+                                    <h3 class="text-sm sm:text-base font-bold text-slate-800 break-words ${item.completed ? 'line-through text-slate-400' : ''}">
                                         ${currentListMode === 'food' || isFoodItem(item)
                                             ? escapeHtml(item.name)
                                             : `<a href="${shopImageSearchUrl(item)}" target="_blank" rel="noopener noreferrer" title="구글 이미지에서 검색: ${escapeHtml(shopImageSearchQuery(item))}" class="hover:text-osaka-red hover:underline decoration-2 underline-offset-2">${escapeHtml(item.name)}</a>`}
