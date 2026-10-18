@@ -96,7 +96,7 @@
 
     <!-- Top Banner / Header -->
     <header class="bg-gradient-to-r from-osaka-red via-red-500 to-osaka-orange text-white shadow-lg sticky top-0 z-30">
-        <div class="max-w-2xl mx-auto px-4 py-3.5 flex items-center gap-2">
+        <div class="max-w-2xl mx-auto px-4 py-3.5 flex items-end justify-between gap-3">
             <div class="flex items-center space-x-2.5 min-w-0">
                 <button type="button" id="headerIconBtn" onclick="cycleHeaderIcon()" title="클릭하면 오사카 대표 이미지로 바뀝니다"
                     class="bg-white/20 hover:bg-white/30 p-2 rounded-xl backdrop-blur-sm text-2xl shadow-inner shrink-0 leading-none transition-colors">
@@ -109,11 +109,6 @@
                             <i class="ph-fill ph-map-pin text-[11px]"></i>
                             <span>우리 숙소</span>
                         </button>
-                        <span id="autoSaveHeaderBtn" title="실시간 동기화 상태"
-                            class="text-[10px] font-bold bg-black/25 text-white px-2 py-0.5 rounded-full flex items-center gap-1 border border-white/20">
-                            <span id="autoSaveDot" class="w-1.5 h-1.5 rounded-full bg-amber-300 animate-ping"></span>
-                            <span id="autoSaveStatusText">☁️ 동기화 중...</span>
-                        </span>
                     </div>
                     <h1 id="listTitle" contenteditable="false" spellcheck="false" lang="ko"
                         title="비밀번호 입력 후 제목을 바꿀 수 있습니다"
@@ -122,6 +117,11 @@
                     </h1>
                 </div>
             </div>
+            <span id="autoSaveHeaderBtn" title="실시간 동기화 상태"
+                class="shrink-0 text-[10px] font-bold bg-black/25 text-white px-2 py-0.5 rounded-full flex items-center gap-1 border border-white/20 mb-0.5">
+                <span id="autoSaveDot" class="w-1.5 h-1.5 rounded-full bg-amber-300 animate-ping"></span>
+                <span id="autoSaveStatusText">☁️ 동기화 중...</span>
+            </span>
         </div>
     </header>
 
