@@ -606,37 +606,6 @@
         const FOOD_CATEGORY_IDS = new Set(FOOD_CATEGORIES.filter(c => c.id !== '전체').map(c => c.id));
 
         const MAP_SKIP_BRANCHES = new Set(['지점 무관/기타', '기타 편의점', '기타 지점', '기타', '지점 미정', '위치 무관/기타']);
-        const BRANCH_MAP_QUERIES = {
-            '세븐일레븐': '大阪 セブンイレブン',
-            '로손': '大阪 ローソン',
-            '패밀리마트': '大阪 ファミリーマート',
-            '도톤보리점': 'ドンキホーテ 道頓堀店 大阪',
-            '도톤보리 미도스지점': 'ドンキホーテ 道頓堀店御堂筋 大阪',
-            '메가돈키 신세카이점': 'メガドンキホーテ 新世界店 大阪',
-            '우메다 본점': 'ドンキホーテ 梅田本店 大阪',
-            '난바 센니치마에점': 'ドンキホーテ なんば千日前店 大阪',
-            '마츠모토 키요시': 'マツモトキヨシ 大阪',
-            '다이코쿠 드럭': 'ダイコクドラッグ 大阪',
-            '선드럭': 'サンドラッグ 大阪',
-            '스기약국': 'スギ薬局 大阪',
-            '코코카라파인': 'ココカラファイン 大阪',
-            '다이마루 신사이바시': '大丸心斎橋店 大阪',
-            '다카시마야 난바': '高島屋 大阪 難波',
-            '한큐 우메다': '阪急うめだ本店',
-            '한신 우메다': '阪神梅田本店',
-            '파르코(PARCO)': '心斎橋PARCO 大阪',
-            '라이프(LIFE) 마트': 'ライフ 大阪',
-            '이온몰/이온스타일': 'イオンモール 大阪',
-            '로프트(LOFT)': 'LOFT 大阪',
-            '다이소/세리아': 'ダイソー 大阪',
-            '칼디(KALDI)': 'カルディ 大阪',
-            '도톤보리': '大阪 道頓堀',
-            '난바/신사이바시': '大阪 難波 心斎橋',
-            '신세카이': '大阪 新世界',
-            '우메다': '大阪 梅田',
-            '덴노지/아베노': '大阪 天王寺 阿倍野',
-            '유니버설/베이': 'ユニバーサル・スタジオ・ジャパン'
-        };
 
         function mapsSearchUrl(query) {
             return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(query);
@@ -735,7 +704,7 @@
         function getBranchMapUrl(branch) {
             const name = String(branch || '').trim();
             if (!name || MAP_SKIP_BRANCHES.has(name)) return '';
-            const query = BRANCH_MAP_QUERIES[name] || ('大阪 ' + name);
+            const query = name.includes('오사카') ? name : ('오사카 ' + name);
             return mapsSearchUrl(query);
         }
 
