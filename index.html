@@ -305,6 +305,11 @@
                     <span id="filteredCount" class="font-bold text-slate-700">총 0개</span>
                     <span>아이템</span>
                     <span id="listProgressText" class="text-[11px] text-slate-400 font-semibold">(0/0)</span>
+                    <button type="button" id="btnFavOnly" onclick="toggleFavoriteFilter()" title="즐겨찾기만 보기"
+                        class="inline-flex items-center gap-0.5 text-[11px] font-bold text-slate-400 hover:text-amber-600 transition-colors">
+                        <i class="ph ph-star"></i>
+                        <span>즐겨찾기</span>
+                    </button>
                     <span class="text-[11px] text-slate-400 hidden sm:inline">· 항목의 ✏️ 수정 버튼을 눌러 이름/카테고리/지점/가격을 언제든 변경하세요</span>
                 </div>
                 <div class="flex items-center gap-3">
@@ -914,6 +919,7 @@
         let listIcon = OSAKA_ICONS[0];
         let currentCategory = '전체';
         let currentBranchFilter = '전체';
+        let currentFavOnly = false;
         let editingItemId = null; // ID of item currently being edited
         let translatingItemId = null; // ID of item currently being translated
         let supabaseClient = null;
@@ -1030,26 +1036,31 @@
 
         const KRW_MARK_RE = /(?:\n)?\[\[krw:(\d+)\]\]/g;
         const RATE_MARK_RE = /(?:\n)?\[\[rate:([1-5])\]\]/g;
+        const FAV_MARK_RE = /(?:\n)?\[\[fav:1\]\]/g;
 
         function parseMemoMeta(raw) {
             const text = String(raw || '');
             let krwPrice = null;
             let rating = null;
+            let favorite = false;
             const memo = text
                 .replace(KRW_MARK_RE, (_, n) => { krwPrice = parseInt(n, 10); return ''; })
                 .replace(RATE_MARK_RE, (_, n) => { rating = parseInt(n, 10); return ''; })
+                .replace(FAV_MARK_RE, () => { favorite = true; return ''; })
                 .replace(/\s+$/g, '');
-            return { memo, krwPrice, rating };
+            return { memo, krwPrice, rating, favorite };
         }
 
-        function encodeMemoMeta(memo, krwPrice, rating) {
+        function encodeMemoMeta(memo, krwPrice, rating, favorite) {
             const base = String(memo || '')
                 .replace(KRW_MARK_RE, '')
                 .replace(RATE_MARK_RE, '')
+                .replace(FAV_MARK_RE, '')
                 .replace(/\s+$/g, '');
             const tags = [];
             if (krwPrice != null && Number(krwPrice) > 0) tags.push(`[[krw:${Math.round(Number(krwPrice))}]]`);
             if (rating >= 1 && rating <= 5) tags.push(`[[rate:${rating}]]`);
+            if (favorite) tags.push('[[fav:1]]');
             if (!tags.length) return base;
             return (base ? base + '\n' : '') + tags.join('');
         }
@@ -1062,7 +1073,7 @@
                 category: item.category,
                 branch: item.branch || '',
                 price: item.price,
-                memo: encodeMemoMeta(item.memo, item.krwPrice, item.rating),
+                memo: encodeMemoMeta(item.memo, item.krwPrice, item.rating, item.favorite),
                 completed: Boolean(item.completed),
                 created_at: item.createdAt,
                 updated_at: new Date().toISOString()
@@ -1450,6 +1461,7 @@
                     price: (item.price !== null && item.price !== undefined && item.price !== '' && Number(item.price) > 0) ? Number(item.price) : null,
                     krwPrice: krwFromItem && krwFromItem > 0 ? krwFromItem : null,
                     rating: (ratingFromItem >= 1 && ratingFromItem <= 5) ? ratingFromItem : null,
+                    favorite: item.favorite === true || parsed.favorite === true,
                     memo: parsed.memo,
                     completed: Boolean(item.completed),
                     createdAt: item.createdAt || Date.now()
@@ -1906,6 +1918,34 @@
             renderShoppingList();
         }
 
+        function updateFavFilterUi() {
+            const btn = document.getElementById('btnFavOnly');
+            if (!btn) return;
+            const icon = btn.querySelector('i');
+            if (currentFavOnly) {
+                btn.className = 'inline-flex items-center gap-0.5 text-[11px] font-bold text-amber-600 transition-colors';
+                if (icon) icon.className = 'ph-fill ph-star';
+            } else {
+                btn.className = 'inline-flex items-center gap-0.5 text-[11px] font-bold text-slate-400 hover:text-amber-600 transition-colors';
+                if (icon) icon.className = 'ph ph-star';
+            }
+        }
+
+        function toggleFavoriteFilter() {
+            currentFavOnly = !currentFavOnly;
+            updateFavFilterUi();
+            renderShoppingList();
+        }
+
+        async function toggleFavorite(id, event) {
+            if (event) event.stopPropagation();
+            const item = items.find(i => i.id === id);
+            if (!item) return;
+            item.favorite = !item.favorite;
+            renderShoppingList();
+            await persistSingleItem(item, item.favorite ? `'${item.name}' 즐겨찾기` : `'${item.name}' 즐겨찾기 해제`);
+        }
+
         // =========================================================================
         // 4. ADD & FULL EDIT ITEM HANDLERS (Name, Japanese Name, Category, Sub-branch, Price, Memo)
         // =========================================================================
@@ -1943,6 +1983,7 @@
                 price,
                 krwPrice,
                 memo,
+                favorite: false,
                 completed: false,
                 createdAt: Date.now()
             };
@@ -2210,8 +2251,12 @@
             if (currentCategory !== '전체' && currentBranchFilter !== '전체') {
                 filteredItems = filteredItems.filter(item => item.branch === currentBranchFilter);
             }
+            if (currentFavOnly) {
+                filteredItems = filteredItems.filter(item => item.favorite);
+            }
 
             document.getElementById('filteredCount').textContent = `총 ${filteredItems.length}개`;
+            updateFavFilterUi();
             const progressEl = document.getElementById('listProgressText');
             if (progressEl) {
                 const checkedCount = modeItems.filter(i => i.completed).length;
@@ -2229,8 +2274,12 @@
                 container.innerHTML = `
                     <div class="bg-white/80 rounded-2xl p-10 text-center border border-dashed border-slate-300 my-4">
                         <div class="text-4xl mb-3">${currentListMode === 'food' ? '🍜' : '🛍️'}</div>
-                        <p class="text-sm font-bold text-slate-600">${currentListMode === 'food' ? '조건에 맞는 가고 싶은 식당이 없습니다.' : '조건에 맞는 쇼핑 아이템이 없습니다.'}</p>
-                        <p class="text-xs text-slate-400 mt-1">${currentListMode === 'food' ? '위 입력창에서 식당 분류와 위치를 고르고 추가해보세요!' : '위 입력창에서 지점과 물건 이름을 입력해 추가해보세요!'}</p>
+                        <p class="text-sm font-bold text-slate-600">${currentFavOnly
+                            ? '즐겨찾기한 항목이 없습니다.'
+                            : (currentListMode === 'food' ? '조건에 맞는 가고 싶은 식당이 없습니다.' : '조건에 맞는 쇼핑 아이템이 없습니다.')}</p>
+                        <p class="text-xs text-slate-400 mt-1">${currentFavOnly
+                            ? '이름 왼쪽 별을 눌러 즐겨찾기에 넣어보세요.'
+                            : (currentListMode === 'food' ? '위 입력창에서 식당 분류와 위치를 고르고 추가해보세요!' : '위 입력창에서 지점과 물건 이름을 입력해 추가해보세요!')}</p>
                     </div>
                 `;
                 return;
@@ -2381,6 +2430,10 @@
                                     </svg>
                                 </div>
                             </label>
+                            <button type="button" onclick="toggleFavorite('${item.id}', event)" title="${item.favorite ? '즐겨찾기 해제' : '즐겨찾기'}"
+                                class="mt-0.5 w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors ${item.favorite ? 'text-amber-400 hover:bg-amber-50' : 'text-slate-300 hover:text-amber-400 hover:bg-amber-50'}">
+                                <i class="${item.favorite ? 'ph-fill ph-star' : 'ph ph-star'} text-lg"></i>
+                            </button>
 
                             <div class="flex-1 min-w-0">
                                 <div class="flex items-center gap-1.5 flex-wrap">
