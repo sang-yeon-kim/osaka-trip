@@ -132,6 +132,10 @@
             0%, 14% { transform: translateX(0); }
             86%, 100% { transform: translateX(var(--memo-shift, 0px)); }
         }
+        .branch-field-row select,
+        .branch-field-row input[type="text"] {
+            box-sizing: border-box;
+        }
     </style>
 </head>
 <body class="text-slate-800 antialiased selection:bg-osaka-red selection:text-white min-h-screen pb-16" id="dropZone">
@@ -168,7 +172,7 @@
     </header>
 
     <!-- Main Container -->
-    <main class="max-w-2xl mx-auto px-4 mt-5 space-y-5">
+    <main class="max-w-2xl mx-auto px-4 mt-5 space-y-5 min-w-0 w-full">
 
         <!-- Hidden File Input Fallback (JSON import → Supabase upsert) -->
         <input type="file" id="hiddenJsonFileInput" accept=".json,application/json" class="hidden" onchange="handleFallbackFileSelect(event)">
@@ -208,7 +212,7 @@
         </div>
 
         <!-- Add Item Form -->
-        <section class="bg-white rounded-2xl p-5 shadow-md border border-slate-100">
+        <section class="bg-white rounded-2xl p-5 shadow-md border border-slate-100 min-w-0 max-w-full overflow-hidden">
             <h2 class="text-base font-bold text-slate-800 mb-3.5 flex items-center gap-1.5">
                 <i class="ph-bold ph-plus-circle text-osaka-red text-lg"></i>
                 <span id="addFormTitle">사고 싶은 것 추가하기</span>
@@ -219,26 +223,21 @@
                     <!-- Category Select -->
                     <div class="sm:col-span-5">
                         <label for="itemCategory" id="labelCategory" class="block text-xs font-semibold text-slate-500 mb-1">1. 매장 분류</label>
-                        <select id="itemCategory" required onchange="handleCategoryChange()"
+                        <select id="itemCategory" onchange="handleCategoryChange()"
                             class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-bold text-slate-700 focus:bg-white focus:border-osaka-red focus:outline-none focus:ring-2 focus:ring-osaka-red/20 transition-all">
-                            <option value="편의점">🍙 편의점 (세븐/로손/패밀리)</option>
-                            <option value="돈키호테">🐧 돈키호테</option>
-                            <option value="드럭스토어">💊 드럭스토어</option>
-                            <option value="백화점/쇼핑몰">🛍️ 백화점/쇼핑몰</option>
-                            <option value="마트/기타">🛒 마트/기타</option>
                         </select>
                     </div>
 
                     <!-- Branch / Brand Select -->
-                    <div class="sm:col-span-7">
+                    <div class="sm:col-span-7 min-w-0">
                         <label for="itemBranch" id="labelBranch" class="block text-xs font-semibold text-slate-500 mb-1">2. 세부 지점 / 편의점 종류</label>
-                        <div class="flex gap-2">
+                        <div class="branch-field-row flex flex-col sm:flex-row gap-2 min-w-0 w-full max-w-full">
                             <select id="itemBranch" onchange="handleBranchSelectChange()"
-                                class="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-medium text-slate-700 focus:bg-white focus:border-osaka-red focus:outline-none focus:ring-2 focus:ring-osaka-red/20 transition-all">
+                                class="w-full min-w-0 max-w-full sm:flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-medium text-slate-700 focus:bg-white focus:border-osaka-red focus:outline-none focus:ring-2 focus:ring-osaka-red/20 transition-all disabled:opacity-60">
                                 <!-- Populated dynamically based on Category -->
                             </select>
-                            <input type="text" id="customBranchInput" lang="ko" autocomplete="off" placeholder="지점명 직접 입력"
-                                class="hidden flex-1 rounded-xl border border-osaka-orange bg-amber-50/30 px-3 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:bg-white focus:border-osaka-red focus:outline-none focus:ring-2 focus:ring-osaka-red/20 transition-all">
+                            <input type="text" id="customBranchInput" lang="ko" autocomplete="off" placeholder="지점명 직접 입력" oninput="updateAddFormState()"
+                                class="hidden w-full min-w-0 max-w-full sm:flex-1 rounded-xl border border-osaka-orange bg-amber-50/30 px-3 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:bg-white focus:border-osaka-red focus:outline-none focus:ring-2 focus:ring-osaka-red/20 transition-all box-border">
                         </div>
                     </div>
                 </div>
@@ -278,8 +277,8 @@
                 <div class="flex flex-col sm:flex-row gap-2 pt-1">
                     <input type="text" id="itemMemo" lang="ko" autocomplete="off" placeholder="메모 / 수량 (선택: 2개, 선물용, 특대 사이즈 등)"
                         class="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs text-slate-700 placeholder-slate-400 focus:bg-white focus:border-osaka-red focus:outline-none focus:ring-2 focus:ring-osaka-red/20 transition-all">
-                    <button type="submit"
-                        class="bg-osaka-red hover:bg-red-600 active:scale-[0.99] text-white font-bold text-sm px-6 py-2.5 rounded-xl shadow-sm shadow-osaka-red/30 transition-all flex items-center justify-center gap-1.5 shrink-0">
+                    <button type="submit" id="btnAddItem" disabled
+                        class="bg-osaka-red hover:bg-red-600 active:scale-[0.99] disabled:opacity-45 disabled:cursor-not-allowed disabled:hover:bg-osaka-red disabled:active:scale-100 text-white font-bold text-sm px-6 py-2.5 rounded-xl shadow-sm shadow-osaka-red/30 transition-all flex items-center justify-center gap-1.5 shrink-0">
                         <i class="ph-bold ph-plus"></i>
                         <span>리스트에 추가</span>
                     </button>
@@ -301,16 +300,14 @@
 
             <!-- Sub-controls: Count & Clear buttons -->
             <div class="flex items-center justify-between text-xs text-slate-500 px-1 pt-1">
-                <div class="flex items-center gap-1.5">
+                <div class="flex items-center flex-wrap gap-x-3 gap-y-1">
                     <span id="filteredCount" class="font-bold text-slate-700">총 0개</span>
-                    <span>아이템</span>
-                    <span id="listProgressText" class="text-[11px] text-slate-400 font-semibold">(0/0)</span>
+                    <span id="listProgressText" class="text-[11px] text-slate-500 font-semibold">완료항목 (0/0)</span>
                     <button type="button" id="btnFavOnly" onclick="toggleFavoriteFilter()" title="즐겨찾기만 보기"
                         class="inline-flex items-center gap-0.5 text-[11px] font-bold text-slate-400 hover:text-amber-600 transition-colors">
                         <i class="ph ph-star"></i>
-                        <span>즐겨찾기</span>
+                        <span>즐겨찾기 보기</span>
                     </button>
-                    <span class="text-[11px] text-slate-400 hidden sm:inline">· 항목의 ✏️ 수정 버튼을 눌러 이름/카테고리/지점/가격을 언제든 변경하세요</span>
                 </div>
                 <div class="flex items-center gap-3">
                     <button type="button" onclick="requestClearCompleted()" id="btnClearCompleted" class="hover:text-osaka-red transition-colors flex items-center gap-1 hidden font-medium">
@@ -732,7 +729,7 @@
                 messageEl.textContent = pinModalPurpose === 'title'
                     ? '비밀번호를 입력하면 제목을 바꿀 수 있습니다.'
                     : (pinModalPurpose === 'edit'
-                        ? '처음 한 번만 비밀번호를 입력하면, 이 브라우저에서는 리스트 수정·숙소 위치·제목 변경을 바로 할 수 있습니다.'
+                        ? '처음 한 번만 비밀번호를 입력하면, 이 브라우저에서는 리스트 수정·완료 체크·즐겨찾기·숙소 위치·제목 변경을 바로 할 수 있습니다.'
                         : '비밀번호를 입력하면 구글맵에서 위치를 엽니다.');
             }
             if (submitEl) {
@@ -843,11 +840,41 @@
             return items.filter(i => currentListMode === 'food' ? isFoodItem(i) : !isFoodItem(i));
         }
 
+        const ADD_FORM_PLACEHOLDER = '---선택하세요---';
+
         function populateCategorySelect() {
             const sel = document.getElementById('itemCategory');
             if (!sel) return;
             const cats = activeCatalog().filter(c => c.id !== '전체');
-            sel.innerHTML = cats.map(c => `<option value="${escapeHtml(c.id)}">${c.icon} ${escapeHtml(c.label)}</option>`).join('');
+            sel.innerHTML = `<option value="">${ADD_FORM_PLACEHOLDER}</option>` +
+                cats.map(c => `<option value="${escapeHtml(c.id)}">${c.icon} ${escapeHtml(c.label)}</option>`).join('');
+        }
+
+        function resetAddFormCategoryBranch() {
+            const categorySelect = document.getElementById('itemCategory');
+            if (categorySelect) categorySelect.value = '';
+            handleCategoryChange();
+            updateAddFormState();
+        }
+
+        function isAddFormReady() {
+            const categoryEl = document.getElementById('itemCategory');
+            const branchEl = document.getElementById('itemBranch');
+            const customBranchEl = document.getElementById('customBranchInput');
+            const category = categoryEl ? categoryEl.value : '';
+            if (!category) return false;
+            const branch = branchEl ? branchEl.value : '';
+            if (!branch) return false;
+            if (branch === '__custom__') {
+                return Boolean(customBranchEl && customBranchEl.value.trim());
+            }
+            return true;
+        }
+
+        function updateAddFormState() {
+            const ready = isAddFormReady();
+            const btn = document.getElementById('btnAddItem');
+            if (btn) btn.disabled = !ready;
         }
 
         function applyListModeUi() {
@@ -882,8 +909,8 @@
             currentBranchFilter = '전체';
             editingItemId = null;
             populateCategorySelect();
+            resetAddFormCategoryBranch();
             applyListModeUi();
-            handleCategoryChange();
             renderCategoryTabs();
             renderSubFilterPills();
             renderShoppingList();
@@ -933,8 +960,8 @@
             setupTitleEditor();
             warmupJapaneseVoices();
             populateCategorySelect();
+            resetAddFormCategoryBranch();
             applyListModeUi();
-            handleCategoryChange();
             setupDragAndDrop();
             setupHorizontalScrolls();
             fillCredentialInputs();
@@ -1759,13 +1786,26 @@
             const prevCustom = customBranchInput.value;
             const wasCustom = prevBranch === '__custom__';
 
+            if (!selectedCatId) {
+                branchSelect.innerHTML = `<option value="">${ADD_FORM_PLACEHOLDER}</option>`;
+                branchSelect.value = '';
+                branchSelect.disabled = true;
+                customBranchInput.classList.add('hidden');
+                customBranchInput.value = '';
+                document.getElementById('branchQuickChips').innerHTML = '';
+                updateAddFormState();
+                return;
+            }
+
+            branchSelect.disabled = false;
             const catObj = activeCatalog().find(c => c.id === selectedCatId);
             const branches = catObj ? catObj.branches : (currentListMode === 'food' ? FOOD_LOCATIONS : []);
 
-            branchSelect.innerHTML = branches.map(b => `<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`).join('') +
+            branchSelect.innerHTML = `<option value="">${ADD_FORM_PLACEHOLDER}</option>` +
+                branches.map(b => `<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`).join('') +
                 `<option value="__custom__">✏️ 직접 입력...</option>`;
 
-            if (wasCustom) {
+            if (wasCustom && selectedCatId === categorySelect.dataset.lastCatId) {
                 branchSelect.value = '__custom__';
                 customBranchInput.classList.remove('hidden');
                 customBranchInput.value = prevCustom;
@@ -1773,11 +1813,14 @@
                 branchSelect.value = prevBranch;
                 customBranchInput.classList.add('hidden');
             } else {
+                branchSelect.value = '';
                 customBranchInput.classList.add('hidden');
                 customBranchInput.value = '';
             }
+            categorySelect.dataset.lastCatId = selectedCatId;
 
             renderBranchQuickChips(branches);
+            updateAddFormState();
         }
 
         function handleBranchSelectChange() {
@@ -1790,6 +1833,7 @@
                 customBranchInput.classList.add('hidden');
             }
             updateQuickChipActiveState();
+            updateAddFormState();
         }
 
         function renderBranchQuickChips(branches) {
@@ -1817,6 +1861,7 @@
             branchSelect.value = branchName;
             customBranchInput.classList.add('hidden');
             updateQuickChipActiveState();
+            updateAddFormState();
         }
 
         function updateQuickChipActiveState() {
@@ -1939,6 +1984,7 @@
 
         async function toggleFavorite(id, event) {
             if (event) event.stopPropagation();
+            if (!(await ensureEditUnlocked())) return;
             const item = items.find(i => i.id === id);
             if (!item) return;
             item.favorite = !item.favorite;
@@ -1951,6 +1997,12 @@
         // =========================================================================
         async function handleAddItem(e) {
             e.preventDefault();
+            if (!isAddFormReady()) {
+                showToast(currentListMode === 'food'
+                    ? '식당 분류와 위치를 선택해 주세요.'
+                    : '매장 분류와 세부 지점을 선택해 주세요.');
+                return;
+            }
             if (!(await ensureEditUnlocked())) return;
             const categoryEl = document.getElementById('itemCategory');
             const branchEl = document.getElementById('itemBranch');
@@ -2021,6 +2073,10 @@
             if (editingItemId === id) return;
             const item = items.find(i => i.id === id);
             if (!item) return;
+            if (!(await ensureEditUnlocked())) {
+                renderShoppingList();
+                return;
+            }
             if (item.completed) {
                 item.completed = false;
                 item.rating = null;
@@ -2260,7 +2316,7 @@
             const progressEl = document.getElementById('listProgressText');
             if (progressEl) {
                 const checkedCount = modeItems.filter(i => i.completed).length;
-                progressEl.textContent = `(${checkedCount}/${modeItems.length})`;
+                progressEl.textContent = `완료항목 (${checkedCount}/${modeItems.length})`;
             }
             const hasCompleted = modeItems.some(i => i.completed);
             const btnClearCompleted = document.getElementById('btnClearCompleted');
@@ -2279,7 +2335,7 @@
                             : (currentListMode === 'food' ? '조건에 맞는 가고 싶은 식당이 없습니다.' : '조건에 맞는 쇼핑 아이템이 없습니다.')}</p>
                         <p class="text-xs text-slate-400 mt-1">${currentFavOnly
                             ? '이름 왼쪽 별을 눌러 즐겨찾기에 넣어보세요.'
-                            : (currentListMode === 'food' ? '위 입력창에서 식당 분류와 위치를 고르고 추가해보세요!' : '위 입력창에서 지점과 물건 이름을 입력해 추가해보세요!')}</p>
+                            : (currentListMode === 'food' ? '위 입력창에서 식당 분류와 위치를 고르고 추가해보세요!' : '위 입력창에서 분류·지점을 고른 뒤 이름을 입력해 추가해보세요!')}</p>
                     </div>
                 `;
                 return;
@@ -2332,11 +2388,11 @@
                                             `).join('')}
                                         </select>
                                     </div>
-                                    <div class="sm:col-span-7">
+                                    <div class="sm:col-span-7 min-w-0">
                                         <label class="block text-[11px] font-bold text-slate-500 mb-1">${currentListMode === 'food' ? '2. 식당 위치' : '2. 세부 지점 / 편의점 종류'}</label>
-                                        <div class="flex gap-1.5">
+                                        <div class="branch-field-row flex flex-col sm:flex-row gap-1.5 min-w-0 w-full max-w-full">
                                             <select id="edit-branch-${item.id}" onchange="handleEditBranchChange('${item.id}')"
-                                                class="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 focus:bg-white focus:border-osaka-red focus:outline-none">
+                                                class="w-full min-w-0 max-w-full sm:flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 focus:bg-white focus:border-osaka-red focus:outline-none">
                                                 ${predefinedBranches.map(b => `
                                                     <option value="${escapeHtml(b)}" ${(!isCustomBranch && b === branchLabel) ? 'selected' : ''}>
                                                         ${escapeHtml(b)}
@@ -2346,7 +2402,7 @@
                                             </select>
                                             <input type="text" id="edit-custom-branch-${item.id}" lang="ko" autocomplete="off"
                                                 value="${isCustomBranch ? escapeHtml(branchLabel) : ''}" placeholder="${currentListMode === 'food' ? '위치 입력' : '지점명 입력'}"
-                                                class="${isCustomBranch ? '' : 'hidden'} flex-1 rounded-xl border border-osaka-orange bg-amber-50/30 px-2.5 py-2 text-xs text-slate-800 focus:bg-white focus:outline-none">
+                                                class="${isCustomBranch ? '' : 'hidden'} w-full min-w-0 max-w-full sm:flex-1 rounded-xl border border-osaka-orange bg-amber-50/30 px-2.5 py-2 text-xs text-slate-800 focus:bg-white focus:outline-none box-border">
                                         </div>
                                     </div>
                                 </div>
@@ -2599,7 +2655,7 @@
             const modeItems = itemsForMode();
             const totalCount = modeItems.length;
             const checkedCount = modeItems.filter(i => i.completed).length;
-            progressEl.textContent = `(${checkedCount}/${totalCount})`;
+            progressEl.textContent = `완료항목 (${checkedCount}/${totalCount})`;
         }
 
         // --- Modal & Batch Operations ---
