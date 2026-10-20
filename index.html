@@ -155,6 +155,11 @@
                             <i class="ph-fill ph-map-pin text-[11px]"></i>
                             <span>우리 숙소</span>
                         </button>
+                        <button type="button" onclick="openSchedulePinModal(event)" title="비밀번호 입력 후 일정 보기"
+                            class="text-[10px] font-bold bg-black/30 hover:bg-black/45 text-white px-2 py-0.5 rounded-full flex items-center gap-1 transition-all">
+                            <i class="ph-fill ph-calendar-blank text-[11px]"></i>
+                            <span>우리 일정</span>
+                        </button>
                     </div>
                     <h1 id="listTitle" contenteditable="false" spellcheck="false" lang="ko"
                         title="비밀번호 입력 후 제목을 바꿀 수 있습니다"
@@ -410,6 +415,24 @@
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Trip schedule image -->
+    <div id="scheduleModal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-xs z-50 hidden flex items-center justify-center p-3 sm:p-4" onclick="closeScheduleModalFromBackdrop(event)">
+        <div class="relative max-w-2xl w-full max-h-[92vh] flex flex-col animate-pop" onclick="event.stopPropagation()">
+            <div class="flex items-center justify-between gap-2 mb-2 px-1">
+                <h3 class="text-sm font-bold text-white flex items-center gap-1.5">
+                    <i class="ph-fill ph-calendar-blank"></i> 우리 일정
+                </h3>
+                <button type="button" onclick="closeScheduleModal()" title="닫기"
+                    class="w-9 h-9 rounded-full bg-white/15 hover:bg-white/25 text-white flex items-center justify-center transition-colors">
+                    <i class="ph-bold ph-x text-lg"></i>
+                </button>
+            </div>
+            <div class="overflow-auto rounded-2xl bg-white/95 p-2 shadow-xl border border-white/20">
+                <img id="scheduleModalImage" src="schedule.png" alt="오사카 여행 일정" class="w-full h-auto max-h-[calc(92vh-4rem)] object-contain mx-auto rounded-xl">
+            </div>
         </div>
     </div>
 
@@ -669,6 +692,7 @@
         }
 
         const HOTEL_MAP_URL = mapsSearchUrl('오사카 히노데 호텔');
+        const SCHEDULE_IMAGE_URL = 'schedule.png';
         const HOTEL_PIN_HASH = '62a728b0b2cb8efb20f13941e7fe44058122f9869ab0a9d970fcd5080d0eae86';
         const EDIT_UNLOCK_KEY = 'osaka_list_edit_unlocked_v1';
         let pinModalPurpose = 'hotel';
@@ -711,9 +735,37 @@
             openPinModal('hotel', event);
         }
 
+        function openScheduleImageModal() {
+            const modal = document.getElementById('scheduleModal');
+            const img = document.getElementById('scheduleModalImage');
+            if (img) {
+                img.src = SCHEDULE_IMAGE_URL + '?v=' + Date.now();
+            }
+            if (modal) modal.classList.remove('hidden');
+        }
+
+        function closeScheduleModal() {
+            const modal = document.getElementById('scheduleModal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function closeScheduleModalFromBackdrop(event) {
+            if (event && event.target !== event.currentTarget) return;
+            closeScheduleModal();
+        }
+
+        function openSchedulePinModal(event) {
+            if (event) event.preventDefault();
+            if (isEditUnlocked()) {
+                openScheduleImageModal();
+                return;
+            }
+            openPinModal('schedule', event);
+        }
+
         function openPinModal(purpose, event) {
             if (event) event.preventDefault();
-            pinModalPurpose = (purpose === 'title' || purpose === 'edit') ? purpose : 'hotel';
+            pinModalPurpose = (purpose === 'title' || purpose === 'edit' || purpose === 'schedule') ? purpose : 'hotel';
             const modal = document.getElementById('hotelPinModal');
             const input = document.getElementById('hotelPinInput');
             const err = document.getElementById('hotelPinError');
@@ -723,19 +775,25 @@
             if (titleEl) {
                 titleEl.textContent = pinModalPurpose === 'title'
                     ? '제목 수정'
-                    : (pinModalPurpose === 'edit' ? '리스트 수정' : '우리 숙소');
+                    : (pinModalPurpose === 'edit'
+                        ? '리스트 수정'
+                        : (pinModalPurpose === 'schedule' ? '우리 일정' : '우리 숙소'));
             }
             if (messageEl) {
                 messageEl.textContent = pinModalPurpose === 'title'
                     ? '비밀번호를 입력하면 제목을 바꿀 수 있습니다.'
                     : (pinModalPurpose === 'edit'
-                        ? '처음 한 번만 비밀번호를 입력하면, 이 브라우저에서는 리스트 수정·완료 체크·즐겨찾기·숙소 위치·제목 변경을 바로 할 수 있습니다.'
-                        : '비밀번호를 입력하면 구글맵에서 위치를 엽니다.');
+                        ? '처음 한 번만 비밀번호를 입력하면, 이 브라우저에서는 리스트 수정·완료 체크·즐겨찾기·숙소·일정·제목 변경을 바로 할 수 있습니다.'
+                        : (pinModalPurpose === 'schedule'
+                            ? '비밀번호를 입력하면 여행 일정 이미지를 볼 수 있습니다.'
+                            : '비밀번호를 입력하면 구글맵에서 위치를 엽니다.'));
             }
             if (submitEl) {
                 submitEl.textContent = pinModalPurpose === 'title'
                     ? '수정하기'
-                    : (pinModalPurpose === 'edit' ? '확인' : '위치 열기');
+                    : (pinModalPurpose === 'edit'
+                        ? '확인'
+                        : (pinModalPurpose === 'schedule' ? '일정 보기' : '위치 열기'));
             }
             if (err) err.classList.add('hidden');
             if (input) input.value = '';
@@ -794,6 +852,8 @@
                     if (typeof unlockFn === 'function') unlockFn(true);
                 } else if (purpose === 'title') {
                     beginTitleEdit();
+                } else if (purpose === 'schedule') {
+                    openScheduleImageModal();
                 } else {
                     window.open(HOTEL_MAP_URL, '_blank', 'noopener,noreferrer');
                 }
