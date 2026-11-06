@@ -910,6 +910,13 @@
                     : place;
                 return mapsSearchUrl(query);
             }
+            if (item && String(item.category || '').trim() === '돈키호테') {
+                const branch = String(item.branch || '').trim();
+                if (branch && !MAP_SKIP_BRANCHES.has(branch)) {
+                    return mapsSearchUrl(['오사카', '돈키호테', branch].join(' '));
+                }
+                return mapsSearchUrl('오사카 돈키호테');
+            }
             return getBranchMapUrl(item && item.branch);
         }
 
